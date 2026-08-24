@@ -1,6 +1,6 @@
 # MeshCore Triangulator
 
-[![Build web-standalone image](https://github.com/khagele/meshcore-triangulator/actions/workflows/docker-build.yml/badge.svg)](https://github.com/khagele/meshcore-triangulator/actions/workflows/docker-build.yml)
+[![Build web-standalone image](https://github.com/Dutch-MeshCore/meshcore-triangulator/actions/workflows/docker-build.yml/badge.svg)](https://github.com/Dutch-MeshCore/meshcore-triangulator/actions/workflows/docker-build.yml)
 
 Localises repeaters/nodes/traffic sources on MeshCore from the mesh topology
 (who heard what, from where).
@@ -26,8 +26,8 @@ A quick start is:
 ```bash
 mkdir ~/triangulator
 cd ~/triangulator
-wget https://raw.githubusercontent.com/khagele/meshcore-triangulator/refs/heads/main/web-standalone/docker-compose.yml
-wget https://raw.githubusercontent.com/khagele/meshcore-triangulator/refs/heads/main/web-standalone/.env.example
+wget https://raw.githubusercontent.com/Dutch-MeshCore/meshcore-triangulator/refs/heads/main/web-standalone/docker-compose.yml
+wget https://raw.githubusercontent.com/Dutch-MeshCore/meshcore-triangulator/refs/heads/main/web-standalone/.env.example
 cp .env.example .env
 ```
 
