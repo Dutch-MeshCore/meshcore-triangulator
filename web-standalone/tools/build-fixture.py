@@ -36,7 +36,7 @@ CACHE = os.path.join(HERE, ".cache")
 OUT = os.path.join(HERE, "fixtures", "accuracy-cases.json")
 SEARCH = "https://mc-radar.woodwar.com/api/node-inspector/search"
 CONNECTED = "https://mc-radar.woodwar.com/api/node-inspector/connected/"
-UA = "meshcore-triangulator-fixture/1.0 (+https://github.com/khagele/meshcore-triangulator)"
+UA = "meshcore-triangulator-fixture/1.0 (+https://github.com/Dutch-MeshCore/meshcore-triangulator)"
 
 MIN_CONF = 85          # same threshold as PROVEN_LINK_MIN_CONFIDENCE in index.html
 MIN_OBSERVERS = 3      # fewer than this is not a localisation problem
