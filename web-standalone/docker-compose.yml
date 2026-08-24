@@ -6,13 +6,11 @@ services:
   triangulator:
     # Override in .env (e.g. your fork's image) without editing this file.
     #
-    # STILL THE PRE-TRANSFER PATH, ON PURPOSE (#98). The repo moved to the
-    # Dutch-MeshCore org, so the workflow now publishes to
-    # ghcr.io/dutch-meshcore/meshcore-triangulator. Do NOT point this there
-    # until that package has been made public: a package created fresh under an
-    # org is private, Watchtower pulls anonymously, and the deploy would 403
-    # instead of merely going stale. Order of operations is in #98.
-    image: ${TRIANGULATOR_IMAGE:-ghcr.io/khagele/meshcore-triangulator:latest}
+    # Matches what the workflow publishes, ghcr.io/${{ github.repository }},
+    # which followed the repo to the Dutch-MeshCore org (#98). Verified public
+    # and anonymously pullable before this was switched over; Watchtower pulls
+    # without credentials, so that check is the one that matters.
+    image: ${TRIANGULATOR_IMAGE:-ghcr.io/dutch-meshcore/meshcore-triangulator:latest}
     container_name: triangulator
     # Opt-in marker for auto-updates: harmless if you don't run Watchtower.
     labels:
