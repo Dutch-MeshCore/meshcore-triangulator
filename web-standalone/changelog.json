@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-map-layers",
+    "date": "2026-09-07",
+    "title": "Ranges, links and heat can be switched off",
+    "body": "Once a cluster is locked, three chips above the map switch the range polygons, the proven links (with their arrows and support nodes) and the heat on or off. On a phone the ranges and links start off, because on a small map they covered the answer in one pink wash; the clue zone, the tied region and the observers always stay."
+  },
+  {
     "id": "2026-09-07-easier-on-a-phone",
     "date": "2026-09-07",
     "title": "Easier on a phone",
