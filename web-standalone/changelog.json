@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-fresh-visit",
+    "date": "2026-09-07",
+    "title": "Fresh visits start in the right place",
+    "body": "What's new showed old entries because the browser kept yesterday's file; the page now revalidates on every visit. A fresh visit puts the cursor in the first-hop field, also right after the intro. And a Step 2 label no longer shows before a cluster is locked."
+  },
+  {
     "id": "2026-09-07-the-link-carries-the-scene",
     "date": "2026-09-07",
     "title": "A shared link now carries the whole scene",

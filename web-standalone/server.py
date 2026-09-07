@@ -70,10 +70,22 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
 
     def end_headers(self):
+        # Every response revalidates. Without a Cache-Control header browsers
+        # apply heuristic caching to index.html and changelog.json and served
+        # yesterday's page for hours; Cloudflare in front honours this too
+        # (#124). The proxy routes set their own no-store before this runs.
+        if not any(name.lower() == "cache-control" for name, _ in self._headers_buffer_names()):
+            self.send_header("Cache-Control", "no-cache")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         super().end_headers()
+
+    def _headers_buffer_names(self):
+        for line in getattr(self, "_headers_buffer", []):
+            if isinstance(line, bytes) and b":" in line:
+                name = line.split(b":", 1)[0].decode("latin-1", "replace").strip()
+                yield name, None
 
     def do_OPTIONS(self):
         self.send_response(204)
