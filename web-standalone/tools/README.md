@@ -18,8 +18,11 @@ fixture.
 Cases carry 1st- and 2nd-hop observers. 2nd-hop nodes are prepared the way
 `runCaseDiscovery()` and `applyHopRadii()` prepare them (weight times
 `SECOND_HOP_WEIGHT_FACTOR`, the 2nd-hop km input as `hopRadiusKm`, that same
-value as the wide clustering threshold), so #46, #65, #66 and #67 touch code
-this harness actually runs.
+value as the wide clustering threshold), so #65, #66 and #67 touch code this
+harness actually runs. `scorePoint()` skips 2nd-hop nodes (#46), so in the
+default run they shape the cluster and the search grid but not the score. To
+measure a 2nd-hop scoring kernel, point `--source` at a variant of
+`index.html` without that skip.
 
 ```
 node web-standalone/tools/accuracy.mjs --hop1-only   # drop 2nd-hop observers

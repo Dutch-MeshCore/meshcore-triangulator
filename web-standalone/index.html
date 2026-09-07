@@ -1452,6 +1452,8 @@
     // wide it constrains nothing.
     const PROVEN_RADIUS_PERCENTILE = 0.80;
     // Second-hop observers are one RF hop further from the source: weaker clue.
+    // Reaches componentScore() (candidate ranking) and the observer list, not
+    // the estimate: scorePoint() skips 2nd-hop nodes (#46).
     const SECOND_HOP_WEIGHT_FACTOR = 0.3;
     // 1st-hop nodes have no fixed assumed range any more (removed, #15) — they
     // fall through anchorRangeKm()'s provenRadiusKm / dynamic link_count
@@ -2425,6 +2427,9 @@
     function anchorRangeKm(anchor) {
       // 2nd-hop nodes carry an explicit hopRadiusKm (#15). 1st-hop nodes
       // don't any more — they fall through to provenRadiusKm / dynamic below.
+      // scorePoint() skips 2nd-hop nodes before calling this (#46), so the
+      // estimate never reaches this tier. It stays for #66 and #67, which own
+      // what a 2nd-hop bound should be.
       if (Number.isFinite(anchor.hopRadiusKm) && anchor.hopRadiusKm > 0) {
         return anchor.hopRadiusKm;
       }
@@ -2547,6 +2552,18 @@
     function scorePoint(point, matchedNodes, supportNodes) {
       let logScore = 0;
       matchedNodes.forEach((node) => {
+        // 2nd-hop observers are not scored (#46). "B heard the target at 2
+        // hops" bounds the target to one hop of some relay that is within one
+        // hop of B, not to a disk around B. On the accuracy fixture, 416 of
+        // the 432 2nd-hop observers that reached this loop had their relay as
+        // a 1st-hop member of the same cluster, so their disk repeated the
+        // parent's. Skipping them, paired per case, n=88: med 2.3 -> 2.0 km,
+        // p75 5.7 -> 5.0, 32 better / 22 worse / 34 unchanged. The other
+        // shapes tried (2x disk, parent-aware skip) land inside that noise.
+        // They still shape the cluster, hull and search grid (#65), still
+        // feed provenRadiusKm, and still render. The estimate status line
+        // says how many were left out, so the exclusion is visible.
+        if ((node.hop || 1) === 2) return;
         const likelihood = coverageLikelihood(haversineKm(point, node), anchorRangeKm(node));
         logScore += node.weight * Math.log(Math.max(likelihood, MIN_OBSERVATION_LIKELIHOOD));
       });
@@ -2826,6 +2843,13 @@
     // every estimate, so a paragraph here is a paragraph nobody reads. The
     // reasoning lives in the comment above, not on screen.
     const ESTIMATE_UNCERTAINTY_NOTE = `Typical error ${ESTIMATE_TYPICAL_ERROR_KM} km, more when no observer is close.`;
+    // scorePoint() leaves 2nd-hop observers out (#46). A deliberate exclusion
+    // the operator cannot see reads as a bug, so the count goes on the line.
+    function secondHopNotScoredNote(matchedNodes) {
+      const count = matchedNodes.filter((node) => (node.hop || 1) === 2).length;
+      if (!count) return "";
+      return ` ${count} 2nd-hop observer${count === 1 ? "" : "s"} shown but not scored: 2 hops away says little about where the target is.`;
+    }
 
     function formatEstimateLatLon(point) {
       return `${point.lat.toFixed(ESTIMATE_DECIMALS)}, ${point.lon.toFixed(ESTIMATE_DECIMALS)}`;
@@ -2870,6 +2894,7 @@
         : "Estimating unknown node from weighted observers...";
       try {
         const supportNodes = currentSupportNodes;
+        const hop2Note = secondHopNotScoredNote(matchedNodes);
         const anchors = currentRfAnchors.length ? currentRfAnchors : matchedNodes;
         const candidateNodes = [...matchedNodes, ...supportNodes, ...anchors];
         const lats = candidateNodes.map((node) => node.lat);
@@ -2905,11 +2930,11 @@
         const best = top[0];
         if (useTerrain) {
           terrainStatus.textContent = best
-            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE}`
+            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE}${hop2Note}`
             : "Terrain + LOS refinement did not return usable candidate cells.";
         } else {
           terrainStatus.textContent = best
-            ? `Observer estimate active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE} You can now refine with Terrain + LOS.`
+            ? `Observer estimate active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE}${hop2Note} You can now refine with Terrain + LOS.`
             : "Observer estimate did not return usable candidate cells.";
         }
       } catch (error) {
