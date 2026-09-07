@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-terrain-sees-the-whole-area",
+    "date": "2026-09-07",
+    "title": "Terrain refinement looks across the whole likely area",
+    "body": "Refine with Terrain + LOS used to re-score only the 36 best cells of the flat estimate, so a spot that terrain would have favoured but that ranked 37th or lower could never come up. It now also samples the area that ties with the best cell, every 2nd cell or wider so the pass stays under 150 cells, and the status line says how many cells it saw."
+  },
+  {
     "id": "2026-09-07-resolve-on-map-rivals-and-reset",
     "date": "2026-09-07",
     "title": "Resolve on map shows the rival regions, and can undo",
