@@ -77,6 +77,7 @@ const extracted = [
   // Only reached in --prefix mode, see below.
   grab(/function obsPrefix\(node\) \{[\s\S]*?\n    \}/, "obsPrefix"),
   grab(/function nodeId\(node\) \{[\s\S]*?\n    \}/, "nodeId"),
+  grab(/function firstHopNodes\(nodesList\) \{[\s\S]*?\n    \}/, "firstHopNodes"),
   grab(/function centroidOfNodes\(nodesList\) \{[\s\S]*?\n    \}/, "centroidOfNodes"),
   grab(/function dedupeByPrefix\(nodes, centroid, provenNodeIds = new Set\(\)\) \{[\s\S]*?\n    \}/, "dedupeByPrefix"),
   grab(/function uniquePrefixCount\(nodesList\) \{[\s\S]*?\n    \}/, "uniquePrefixCount"),
@@ -85,8 +86,8 @@ const extracted = [
 
 const estimator = new Function(`${extracted.join("\n")}
   return { scorePoint, anchorRangeKm, haversineKm, provenRadiusFromLinks, connectedComponents,
-           SECOND_HOP_WEIGHT_FACTOR, dedupeByPrefix, centroidOfNodes, nodeId, obsPrefix,
-           componentScore, uniquePrefixCount };`)();
+           SECOND_HOP_WEIGHT_FACTOR, dedupeByPrefix, centroidOfNodes, firstHopNodes, nodeId,
+           obsPrefix, componentScore, uniquePrefixCount };`)();
 
 // --prefix <n> feeds observers the way the APP gets them: by n-hex prefix out
 // of the whole node universe, not by full id (#78).
@@ -213,8 +214,10 @@ const lonPad = Number(grab(/Math\.min\(\.\.\.lons\) - (0\.\d+)/, "lon pad").spli
 const TIED_NATS = 0.5;
 
 function estimate(observers) {
-  const lats = observers.map((o) => o.lat);
-  const lons = observers.map((o) => o.lon);
+  // Grid bounds from the 1st-hop nodes, as updateHeatmap() does (#65).
+  const gridNodes = estimator.firstHopNodes(observers);
+  const lats = gridNodes.map((o) => o.lat);
+  const lons = gridNodes.map((o) => o.lon);
   const minLat = Math.min(...lats) - latPad;
   const maxLat = Math.max(...lats) + latPad;
   const minLon = Math.min(...lons) - lonPad;
@@ -482,8 +485,15 @@ if (compareIndex !== -1 && args[compareIndex + 1]) {
   const worse = deltas.filter((d) => d.delta > 0.05);
   console.log(`\nvs ${args[compareIndex + 1]}: ${better.length} better, ${worse.length} worse, ` +
     `${deltas.length - better.length - worse.length} unchanged`);
-  console.log(`median error change: ${(percentile(results.map((r) => r.errorKm), 0.5) -
-    percentile([...previous.values()], 0.5)).toFixed(2)} km`);
+  // Paired first: the shift in error over the cases both runs scored. The
+  // set-median line that used to stand alone compares two different case
+  // sets whenever a change alters which clusters come out with a single
+  // node, so 3 newly scored hard cases read as a regression of the estimator.
+  const paired = deltas.map((d) => d.delta);
+  console.log(`paired error change over ${paired.length} cases: ` +
+    `median ${percentile(paired, 0.5).toFixed(2)} km, mean ${(paired.reduce((s, d) => s + d, 0) / paired.length).toFixed(2)} km`);
+  console.log(`set median error change: ${(percentile(results.map((r) => r.errorKm), 0.5) -
+    percentile([...previous.values()], 0.5)).toFixed(2)} km (n ${previous.size} -> ${results.length})`);
   // Regressions are what a summary statistic hides, so name the worst.
   worse.sort((a, b) => b.delta - a.delta).slice(0, 5)
     .forEach((d) => console.log(`  worse: ${d.id} +${d.delta.toFixed(1)} km`));
