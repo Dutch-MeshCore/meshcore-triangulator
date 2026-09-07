@@ -1446,11 +1446,26 @@
     // One definition of "proven coverage radius", used by BOTH derivation
     // sites. They disagreed before — p80 after a link edit, p95 during
     // discovery — so the same node's assumed range changed depending on which
-    // code path last stamped it (#42). p80 is deliberately below the maximum:
-    // live data has verified links out to 355 km (airborne and high-site
-    // peers), and a near-max statistic hands those nodes a coverage disk so
-    // wide it constrains nothing.
-    const PROVEN_RADIUS_PERCENTILE = 0.80;
+    // code path last stamped it (#42).
+    //
+    // 1.0: the longest plausible link. A proven link at distance d shows the
+    // node hears out to d, so anything below the maximum bounds nothing. It
+    // was 0.80 as a guard against the 355 km airborne links in live data; the
+    // #61 ceiling (measured-link ceiling, MAX_PLAUSIBLE_LINK_KM hard) now sits
+    // in front of this statistic and does that job. Measured on the accuracy
+    // fixture: at p80, 133 of 823 scored 1st-hop observers had a disk that
+    // excluded the true target, at p100 11 do. Paired against p80, n=88:
+    // med 1.9 -> 1.7 km, p90 11.5 -> 9.9, p90/p95/p100 a monotone trend, and
+    // --hop1-only 19 better / 17 worse. The surface is flatter as a result
+    // (span 9.3 -> 3.5 nats), which is the overconfidence #42 named going
+    // away; #47 is where that gets rendered.
+    const PROVEN_RADIUS_PERCENTILE = 1.0;
+    // Ceiling on a proven radius when it anchors the estimate (#42). Above
+    // this a disk covers the whole search grid and constrains nothing. With
+    // p100 alone the paired mean is -0.16 km; with the cap -0.21 km, 33
+    // better / 21 worse / 34 unchanged. secondHopBoundKm() is not capped here,
+    // it has its own ceiling through linkCeilingKm().
+    const MAX_ANCHOR_RANGE_KM = 30;
     // Second-hop observers are one RF hop further from the source: weaker clue.
     // Reaches componentScore() (candidate ranking) and the observer list, not
     // the estimate: scorePoint() skips 2nd-hop nodes (#46).
@@ -1909,7 +1924,7 @@
       return min;
     }
 
-    // A 2nd-hop node's inclusion bound beyond the hull: prefer the p80 of its
+    // A 2nd-hop node's inclusion bound beyond the hull: prefer the longest plausible link of its
     // own proven-link distances (real evidence), falling back to hop2 km
     // when it has none.
     // Distances go through the same plausibility ceiling as provenRadiusKm
@@ -1965,7 +1980,7 @@
 
     // Link-distance plausibility (#61).
     //
-    // provenRadiusKm is a p80 over the distances of a node's confidence >= 85
+    // provenRadiusKm is the longest plausible distance among a node's confidence >= 85
     // links, and it outranks both fallback constants in anchorRangeKm(), so an
     // input distance sets an observer's coverage disk directly.
     //
@@ -2027,17 +2042,19 @@
     //
     // But restricting outright is not affordable. Inbound-only collapses the
     // per-node sample from median 5 links to 3, puts 54% of nodes under 4 links,
-    // and leaves 18% with none at all. A p80 over 1-2 samples is noise, which is
+    // and leaves 18% with none at all. A radius over 1-2 samples is noise, which is
     // #42's failure mode, so a hard restriction would trade a known bias for a
     // known variance problem. Hence a quorum: use inbound evidence when there is
     // enough of it, otherwise fall back to all directions and say so.
     //
-    // 4 is the smallest count where the interpolating p80 still straddles two
-    // real samples (rank 2.4 of 0..3) rather than resting on one.
+    // 4 was chosen when the statistic was an interpolating p80, the smallest
+    // count where it straddles two real samples (rank 2.4 of 0..3). It is the
+    // longest link now (#42), so the quorum is only about sample size.
     const RECEIVE_QUORUM = 4;
 
-    // entries: [{ km, measured, inbound }] for one node's links. Returns the p80
-    // over the plausible ones, plus everything excluded and why, so callers can
+    // entries: [{ km, measured, inbound }] for one node's links. Returns the
+    // PROVEN_RADIUS_PERCENTILE over the plausible ones (the longest, since
+    // #42), plus everything excluded and why, so callers can
     // report it instead of capping silently (same rule as
     // PROVEN_LINK_NODE_BUDGET).
     function provenRadiusFromLinks(entries) {
@@ -2460,7 +2477,7 @@
         return anchor.hopRadiusKm;
       }
       if (Number.isFinite(anchor.provenRadiusKm) && anchor.provenRadiusKm > 0) {
-        return Math.max(2, anchor.provenRadiusKm);
+        return Math.min(MAX_ANCHOR_RANGE_KM, Math.max(2, anchor.provenRadiusKm));
       }
       // The 22 km cap sits near p80 of physically credible links. Like
       // DEFAULT_ANCHOR_RANGE_KM it was swept and does not move the estimate

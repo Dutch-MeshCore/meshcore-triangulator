@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-range-is-the-longest-link",
+    "date": "2026-09-07",
+    "title": "An observer's range is its longest proven link",
+    "body": "An observer's assumed range came from the 80th percentile of its proven link distances, which left 133 of 823 observers in the accuracy fixture with a range shorter than the distance they actually heard the target at. It is now the longest plausible link, capped at 30 km for the estimate. Median error on the fixture goes from 1.9 to 1.7 km and the 90th percentile from 11.5 to 9.9 km. The likelihood surface is flatter as a result: fewer cells stand out, which is honest about what the evidence pins down."
+  },
+  {
     "id": "2026-09-07-cluster-shape-from-first-hop",
     "date": "2026-09-07",
     "title": "The cluster's shape comes from 1st-hop observers",
