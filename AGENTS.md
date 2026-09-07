@@ -26,10 +26,12 @@ README.md              Start here — which component to host, quick start for b
 .github/workflows/      CI: docker-build.yml builds/publishes web-standalone image to GHCR
 
 web-standalone/         Self-contained map tool (no DB)
-  index.html            Map UI + triangulation logic (Leaflet, vanilla JS, :root CSS tokens)
+  index.html            Map UI + triangulation logic (MapLibre GL, vanilla JS, :root CSS tokens)
+  changelog.json        "What's new" entries, newest first; every user-visible change adds one
   server.py             stdlib-only HTTP server + proxy for upstream feeds (mc-radar, meshcore.io, PDOK, mc-spamdetector.nl)
   spamdetector.py       parses a spam-detector attack page into Step 1 clues (pure logic, tested)
   tests/                pytest for the pure logic; fixtures are trimmed copies of real upstream pages
+  tools/                accuracy.mjs (estimator error against known targets), its fixture, build-fixture.py
   Dockerfile            Alpine, non-root, stdlib-only
   docker-compose.yml    App + cloudflared sidecar, hardened (read-only rootfs, cap_drop ALL)
   .env.example           TUNNEL_TOKEN, optional image override
@@ -41,7 +43,7 @@ web-standalone/         Self-contained map tool (no DB)
 
 | Layer | Technology |
 |---|---|
-| Web UI | Vanilla JS, Leaflet 1.9.4, plain CSS with `:root` custom-property tokens — no build step |
+| Web UI | Vanilla JS, MapLibre GL JS 4.7.1 (OpenFreeMap Liberty basemap, AWS Terrain Tiles for relief), plain CSS with `:root` custom-property tokens — no build step |
 | Web server / proxy | Python 3.7+ stdlib only (`http.server`) — nothing to install |
 | Container | Docker (Alpine, non-root), multi-arch GHA build → GHCR |
 | Deploy | Cloudflare Tunnel |
@@ -62,8 +64,27 @@ Or via Docker — see the root README's Docker quick-start section.
 ### Tests
 
 ```bash
-python3 -m pytest web-standalone/tests    # pure-logic tests (spamdetector.py)
+python3 -m pytest web-standalone/tests    # pure-logic tests (spamdetector.py); CI runs this before the image build
 ```
+
+### Measuring an estimator change
+
+Anything that touches scoring, ranges, clustering, ranking or the reported uncertainty is
+judged with the accuracy harness, paired per case against main, before it is proposed:
+
+```bash
+git show main:web-standalone/index.html > /tmp/main.html
+node web-standalone/tools/accuracy.mjs --source /tmp/main.html --baseline /tmp/main.json
+node web-standalone/tools/accuracy.mjs --compare /tmp/main.json                 # with 2nd-hop observers
+node web-standalone/tools/accuracy.mjs --hop1-only --compare /tmp/main.json     # without: the common flow
+node web-standalone/tools/accuracy.mjs --prefix 2 --compare /tmp/main-prefix.json   # region choice under prefix ambiguity
+```
+
+Read the paired line (better / worse / unchanged, paired mean) and the named worst regressions,
+not only the medians. Operators rarely enter 2nd-hop prefixes, so `--hop1-only` is the flow
+that matters most when the two modes disagree. Put the before/after numbers in the PR. The
+harness extracts the shipped functions from `index.html`, so a variant is a copy of the file
+with one line changed and `--source` pointing at it; see `web-standalone/tools/README.md`.
 
 Going forward:
 
@@ -99,7 +120,9 @@ sketch the approach before writing the real implementation.
 ### 5.2 Verify before claiming done
 
 Run the affected script/page and observe the actual behaviour before saying a task is complete.
-Intent is not verification.
+Intent is not verification. For an estimator change that means the harness numbers above; for a
+UI change it means the page in a browser, on a phone-sized viewport as well when layout is
+involved.
 
 ---
 
@@ -156,8 +179,20 @@ new hardcoded hex values.
 
 ### Don't hammer upstream feeds per-node
 
-The proxied upstream APIs (mc-radar, map.meshcore.io, PDOK) are third-party and rate-limitable.
-Batch/cache lookups (as the existing code does) rather than firing one request per node/prefix.
+The proxied upstream APIs (mc-radar, map.meshcore.io, PDOK, mc-spamdetector.nl) are third-party
+and rate-limitable; mc-radar answers 429 after a few hundred proven-link fetches in a day.
+Batch/cache lookups (as the existing code does, including the in-memory cache in `server.py`
+for the spam detector) rather than firing one request per node/prefix.
+
+### Hide with the `hidden` attribute
+
+A global `[hidden] { display: none !important }` rule exists. Toggle visibility with
+`element.hidden`, not with a display style, and do not add a display rule that has to beat it.
+
+### Every user-visible change gets a changelog entry
+
+Prepend an entry to `web-standalone/changelog.json` in the words of the person using the tool,
+not the words of the code. It feeds the "What's new" panel.
 
 ---
 

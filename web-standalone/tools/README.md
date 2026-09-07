@@ -35,10 +35,14 @@ indistinguishable, and a zero delta read as a green light.
 It also reports how FLAT the likelihood surface is: the log-likelihood range
 across the whole searched grid, the share of that grid tied with the winning
 cell, and how far the tied region reaches. Error alone cannot separate a model
-that is right from one that had nothing to say and guessed the middle. On the
-committed fixture the median case spans 28 nats with 6% of the grid tied, so
-the argmax means something; the hard stratum (nearest observer >= 5 km) spans
-3.8 nats with 42% tied and err med 18.8 km, so there it does not.
+that is right from one that had nothing to say and guessed the middle. These
+are the page's own `surfaceStats()` and `TIED_NATS`, extracted like the
+scoring functions, so what the status line says ("likely within X km", #47)
+and what this reports are one number. On the committed fixture the median
+case spans 4.1 nats with 28% of the grid tied (it was 28 nats and 6% before
+#42 made the ranges honest); the hard stratum (nearest observer >= 5 km, n=13)
+spans 0.5 nats with 100% tied and err med 17.6 km, so there the argmax means
+nothing and the page says so.
 
 Before the 2nd-hop half of the fixture existed the whole grid spanned 0.34 nats
 and was 100% tied, and #69's first kernel sweep read that as "kernel shape does
@@ -58,29 +62,30 @@ node web-standalone/tools/accuracy.mjs --prefix 2
 node web-standalone/tools/accuracy.mjs --prefix 2 --pick-cluster oracle
 ```
 
-At 2 hex that is 4407 decoys pulled in and 241 nodes dropped by dedupe across
-50 of 92 cases, 179 of them decided by the circular nearest-the-centroid step,
-93 of them nodes that really did hear the target.
+At 2 hex that is 4407 decoys pulled in and 493 nodes dropped by dedupe across
+56 of 92 cases, 343 of them decided by the circular nearest-the-centroid step,
+166 of them nodes that really did hear the target (main after #106).
 
 `--pick-cluster oracle` locks the component nearest the known target instead of
 rank 1, standing in for the operator choosing correctly in step 2. Keep the two
 apart: they measure different failures, and the gap between them is the finding.
 
-| n=82, oracle cluster | med | p75 | p90 | max |
+| oracle cluster | med | p75 | p90 | max |
 |---|---|---|---|---|
-| full id | 2.0 | 3.9 | 6.2 | 19.5 |
-| 2-hex prefix | 2.1 | 4.8 | 6.9 | 19.5 |
+| full id, n=91 | 1.9 | 4.7 | 10.2 | 96.8 |
+| 2-hex prefix, n=86 | 1.9 | 4.6 | 9.6 | 45.4 |
 
-| n=92, rank-1 cluster | med | p75 | p90 | max |
+| rank-1 cluster | med | p75 | p90 | max |
 |---|---|---|---|---|
-| full id | 2.4 | 5.8 | 12.2 | 93.8 |
-| 2-hex prefix | 2.8 | 6.4 | 18.2 | 191.9 |
+| full id, n=91 | 1.9 | 4.7 | 10.2 | 96.8 |
+| 2-hex prefix, n=92 | 2.3 | 6.1 | 13.3 | 194.4 |
 
-So the dedupe pick costs ~0.1 km on the median once the right region is locked,
-while picking the region under prefix ambiguity costs over 100 km on single
-cases. Dedupe runs identically in both oracle columns, and the worst rank-1
-blow-ups collapse when only the cluster choice changes: 8938F8CF 155.9 -> 2.5
-km, 29334479 191.9 -> 1.1 km. Cluster choice, not the tie-break, which is #85.
+So the dedupe pick costs nothing measurable on the median once the right region
+is locked, while picking the region under prefix ambiguity costs over 100 km on
+single cases. Dedupe runs identically in both oracle columns, so the gap between
+the two tables is cluster choice. That is where #110 (a chain wider than 30 km
+ranks lower) and #33a (rival regions on the map, operator picks) act; #78 and
+#85 are closed on these numbers.
 
 ### What "rank 1" means here
 
@@ -98,8 +103,15 @@ node web-standalone/tools/accuracy.mjs --baseline /tmp/before.json
 node web-standalone/tools/accuracy.mjs --compare /tmp/before.json
 ```
 
-The comparison names the worst regressions individually, because a summary
-statistic hides exactly the cases worth looking at.
+The comparison prints the paired change first (better / worse / unchanged over
+the cases both runs scored, paired median and mean), then the set-median line
+with both case counts, then the worst regressions by name, because a summary
+statistic hides exactly the cases worth looking at. Read the paired line: a
+change that alters which clusters come out with a single node changes the case
+set, and the set medians then compare different cases.
+
+Run it in both modes. Operators rarely enter 2nd-hop prefixes, so `--hop1-only`
+is the common flow; several changes measured differently in the two (#103).
 
 To measure a variant without touching the working tree, point the extraction at
 another copy:
@@ -110,10 +122,12 @@ sed 's/COVERAGE_EDGE_SHARPNESS = 6/COVERAGE_EDGE_SHARPNESS = 3/' \
 node web-standalone/tools/accuracy.mjs --source /tmp/variant.html
 ```
 
-That is how the parameter sweeps in #69 were run. Note what those found: kernel
-shape, range scale and grid extent all leave the error where it is, because the
-surface is flat before any of them apply. Re-run the flatness numbers before
-spending time on a change that only reshapes the kernel.
+That is how the parameter sweeps in #69, #42, #103 and #47 were run. What they
+found, in the issues: kernel sharpness mattered once 2nd-hop observers were in
+the fixture (#81); the range is the longest proven link, capped at 30 km (#42);
+Cluster km 12 (#106); a flat position sigma, a silent-observer term and a
+wider search box all measure as no gain (#55, #59, #44). Check the flatness
+numbers before spending time on a change that only reshapes the kernel.
 
 The scoring functions are extracted from `index.html` at runtime rather than
 reimplemented, so the harness cannot drift from what ships. If a rename breaks

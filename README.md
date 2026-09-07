@@ -7,7 +7,7 @@ Localises repeaters/nodes/traffic sources on MeshCore from the mesh topology
 
 **Live demo:** [triangulator.dutchmeshcore.nl](https://triangulator.dutchmeshcore.nl/)
 
-Two components, pick based on what you're hosting:
+This repo holds the standalone map tool. The data-collection pipeline it grew out of is a separate private repo (see the end of this page).
 
 ## `web-standalone/` — start here
 
@@ -58,7 +58,17 @@ control in front if you do; the proxy has no auth of its own.
 | map.meshcore.io | Global node feed (fallback). |
 | PDOK AHN | Terrain/surface elevation (NL). |
 | mc-spamdetector.nl | Incident list, and an incident's entry hops as Step 1 clues. |
-| OpenFreeMap | 3D building tiles (no key). |
+
+Loaded by the page directly, not through the proxy: OpenFreeMap vector tiles (the Liberty basemap, no key) and AWS Terrain Tiles (relief in the 3D view, for looking at; line of sight is measured on AHN).
+
+### Tests and accuracy
+
+```bash
+python3 -m pytest web-standalone/tests      # pure-logic tests (spam-detector parser)
+node web-standalone/tools/accuracy.mjs      # estimator error against 92 known targets
+```
+
+The accuracy harness runs offline against a committed fixture and is how every estimator change in this repo is judged; see [web-standalone/tools/README.md](web-standalone/tools/README.md).
 
 ### Deep-linking (for other sites/tools)
 
@@ -89,7 +99,7 @@ automatically clicks "Find Best Matching Region" on load — no further
 interaction needed to land on candidate clusters.
 
 ```
-https://triangulator.dutchmeshcore.nl/?prefixes=db:30,23,db11:12&prefixes2=a0:8,fc&cluster=6
+https://triangulator.dutchmeshcore.nl/?prefixes=db:30,23,db11:12&prefixes2=a0:8,fc
 ```
 
 There's no `hop1` param — the "1st-hop km" input was removed; 1st-hop
