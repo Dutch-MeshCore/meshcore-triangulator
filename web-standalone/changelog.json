@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-wide-regions-rank-lower",
+    "date": "2026-09-07",
+    "title": "A region wider than 30 km ranks lower",
+    "body": "With the larger cluster radius, unrelated repeaters that share a prefix could chain into one wide candidate region that outranked the real one on size. A region wider than 30 km, the longest range the tool assumes for any observer, now has its score scaled down by how far it exceeds that. On the accuracy fixture this fixes the two cases it hit and changes no other."
+  },
+  {
     "id": "2026-09-07-spam-detector-import",
     "date": "2026-09-07",
     "title": "Load an incident straight from the spam detector",
