@@ -2933,12 +2933,98 @@
     // Deliberately no coarse-to-fine refinement pass, the other half of #56:
     // #69 showed a finer grid does not move the error, so it would buy nothing.
     const ESTIMATE_DECIMALS = 3;
-    const ESTIMATE_TYPICAL_ERROR_KM = 2;
-    // Kept to one short clause. This string is appended to a status line that
-    // already carries hull, dedupe and link-exclusion notes, and it reprints on
-    // every estimate, so a paragraph here is a paragraph nobody reads. The
-    // reasoning lives in the comment above, not on screen.
-    const ESTIMATE_UNCERTAINTY_NOTE = `Typical error ${ESTIMATE_TYPICAL_ERROR_KM} km, more when no observer is close.`;
+    // ── What the surface says about itself (#47) ─────────────────────────────
+    // A cell within TIED_NATS of the best one is tied with it: a likelihood
+    // ratio under e^0.5 either way is not a distinction an operator can act
+    // on. tools/accuracy.mjs extracts these and reports the same numbers, so
+    // what the page says and what the harness measures cannot drift.
+    //
+    // Calibrated on the accuracy fixture (n=91): the true position lies within
+    // twice the tied radius in 9 of 10 cases (95 / 88 / 94 / 79% for tied radii
+    // of 0-2 / 2-4 / 4-8 / 8+ km). Cases where 40% or more of the searched area
+    // is tied have p75 9.0 km and p90 28 km against 2.7 and 4.6 below that.
+    // Cases where every 1st-hop observer sits on one side of the estimate (an
+    // angular gap of 180 degrees or more) have p90 22.7 km against 9.3.
+    // "Typical error 2 km", the previous fixed note, described the median and
+    // said the same thing whether the surface had pinned the target to 2 km
+    // or had 40% of the search area tied.
+    const TIED_NATS = 0.5;
+    const TIED_SHARE_FLAT = 0.4;
+    const OBSERVER_GAP_ONE_SIDED_DEG = 180;
+    const LIKELY_RADIUS_FACTOR = 2;
+
+    // `weightScale` is the mean 1st-hop weight. Weight is an exponent on the
+    // likelihood (scorePoint), so the argmax does not move when every weight
+    // is multiplied by 1000, but the log-score differences do, and a 0.5-nat
+    // band would then span nothing. A spam-detector import carries packet
+    // counts in the thousands (#107) and read "likely within 1 km; 0% tied"
+    // on a surface that is no sharper than with weights of 1. Dividing the
+    // band's scale out keeps the fixture calibration (weights of 1) valid.
+    function surfaceStats(cells, best, weightScale = 1) {
+      const scale = Number.isFinite(weightScale) && weightScale > 0 ? weightScale : 1;
+      const worst = cells.reduce((low, cell) => Math.min(low, cell.score), Infinity);
+      const tied = cells.filter((cell) => cell.score > best.score - TIED_NATS * scale);
+      const tiedRadiusKm = tied.reduce((far, cell) => Math.max(far, haversineKm(cell, best)), 0);
+      return {
+        scoreSpanNats: (best.score - worst) / scale,
+        tiedShare: cells.length ? tied.length / cells.length : 0,
+        tiedRadiusKm,
+        tied,
+        scale
+      };
+    }
+
+    function meanFirstHopWeight(nodes) {
+      const direct = firstHopNodes(nodes).map((node) => node.weight).filter((w) => Number.isFinite(w) && w > 0);
+      return direct.length ? direct.reduce((sum, w) => sum + w, 0) / direct.length : 1;
+    }
+
+    // Largest gap, in degrees, between the bearings of the 1st-hop observers
+    // as seen from `point`, and the bearing of the middle of that gap. A gap
+    // of 180 or more means every observer is on one side.
+    function observerGap(nodes, point) {
+      const bearings = firstHopNodes(nodes)
+        .map((node) => (Math.atan2(
+          (node.lon - point.lon) * Math.cos(toRadians(point.lat)),
+          node.lat - point.lat
+        ) * 180 / Math.PI + 360) % 360)
+        .sort((a, b) => a - b);
+      if (bearings.length < 2) return { gapDeg: 360, gapMidDeg: 0 };
+      let gapDeg = 0;
+      let gapMidDeg = 0;
+      bearings.forEach((bearing, index) => {
+        const next = index + 1 < bearings.length ? bearings[index + 1] : bearings[0] + 360;
+        if (next - bearing > gapDeg) {
+          gapDeg = next - bearing;
+          gapMidDeg = ((bearing + next) / 2) % 360;
+        }
+      });
+      return { gapDeg, gapMidDeg };
+    }
+
+    function compassName(bearingDeg) {
+      const names = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
+      return names[Math.round((((bearingDeg % 360) + 360) % 360) / 45) % 8];
+    }
+
+    function likelyWithinKm(stats) {
+      return Math.max(1, Math.ceil(stats.tiedRadiusKm * LIKELY_RADIUS_FACTOR));
+    }
+
+    // The sentence after "Strongest candidate is near ...". Always the radius;
+    // the two warnings only when the evidence earns them.
+    function surfaceNote(stats, gap) {
+      let note = `Likely within ${likelyWithinKm(stats)} km; ${Math.round(stats.tiedShare * 100)}% of the searched area scores the same.`;
+      if (stats.tiedShare >= TIED_SHARE_FLAT) {
+        note += " The observers do not pin this down.";
+      }
+      if (gap && gap.gapDeg >= OBSERVER_GAP_ONE_SIDED_DEG) {
+        note += ` All observers lie to the ${compassName(gap.gapMidDeg + 180)}; one to the ${compassName(gap.gapMidDeg)} would narrow this most.`;
+      }
+      return note;
+    }
+    let lastSurfaceStats = null;
+    let lastSurfaceScale = 1;
     // scorePoint() leaves 2nd-hop observers out (#46). A deliberate exclusion
     // the operator cannot see reads as a bug, so the count goes on the line.
     function secondHopNotScoredNote(matchedNodes) {
@@ -2962,9 +3048,20 @@
       refresh3dData();
     }
 
-    function renderLikelihoodSurface(points) {
+    // `points` are the ranked candidate spots (terrain-rescored when that ran);
+    // `grid` is the whole flat pass and `stats` its tied region (#47). The
+    // heat used to be the 36 best cells only, which cluster at the peak and
+    // paint almost the same colour whether the surface is sharp or flat.
+    function renderLikelihoodSurface(points, grid = points, stats = null) {
       lastEstimatePoints = points.slice(0, 8);
-      lastEstimateGrid = points;
+      lastSurfaceStats = stats;
+      // Cells under a likelihood ratio of 0.05 against the flat-pass best are
+      // dropped from the paint; they would be invisible at the opacity floor.
+      // Same weight scale as the statistics, or a heavy-weight import paints
+      // one cell (see surfaceStats).
+      const flatBest = grid[0]?.score ?? 0;
+      lastSurfaceScale = stats && stats.scale ? stats.scale : 1;
+      lastEstimateGrid = grid.filter((cell) => cell.score >= flatBest - 3 * lastSurfaceScale);
       // Scores are log-likelihoods (negative), so normalise on the DIFFERENCE
       // from the best cell, not the ratio. exp(log p - log pBest) is a proper
       // likelihood ratio in [0, 1]: 1 at the peak, falling away from it. A
@@ -2973,7 +3070,7 @@
       // legitimate here, it means a perfect fit.
       // heatFeatures3d() applies the same normalisation when it paints, so
       // recording the best score is all this has to do now (#91 stage 4).
-      lastEstimateMax = points[0]?.score ?? 0;
+      lastEstimateMax = flatBest;
       refresh3dData();
     }
 
@@ -3011,6 +3108,12 @@
           }
         }
         grid.sort((a, b) => b.score - a.score);
+        // The region and its size come from the flat pass: terrain rescores
+        // the 36 best cells below, which cannot widen or narrow the area the
+        // observers themselves allow.
+        const stats = surfaceStats(grid, grid[0], meanFirstHopWeight(matchedNodes));
+        const gap = observerGap(matchedNodes, grid[0]);
+        const note = surfaceNote(stats, gap);
         let top = grid.slice(0, 36);
         if (useTerrain) {
           const terrainCandidates = grid.slice(0, 36);
@@ -3026,15 +3129,15 @@
           terrainScored.sort((a, b) => b.score - a.score);
           top = terrainScored.slice(0, 36);
         }
-        renderLikelihoodSurface(top);
+        renderLikelihoodSurface(top, grid, stats);
         const best = top[0];
         if (useTerrain) {
           terrainStatus.textContent = best
-            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE}${hop2Note}`
+            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${note} Terrain re-scored the 36 best cells inside that area.${hop2Note}`
             : "Terrain + LOS refinement did not return usable candidate cells.";
         } else {
           terrainStatus.textContent = best
-            ? `Observer estimate active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${ESTIMATE_UNCERTAINTY_NOTE}${hop2Note} You can now refine with Terrain + LOS.`
+            ? `Observer estimate active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${note}${hop2Note} You can now refine with Terrain + LOS.`
             : "Observer estimate did not return usable candidate cells.";
         }
       } catch (error) {
@@ -4098,8 +4201,14 @@
 
     // The dashed outline around the top estimate spots, so they read as a
     // region rather than isolated dots. The dots themselves are t3d-est.
+    // The dashed outline is the tied region: every cell within TIED_NATS of
+    // the best one (#47). It used to be the hull over the 8 best spots, which
+    // is a picture of the peak, not of how much the evidence allows. Falls
+    // back to those spots when the stats are missing (an older estimate).
     function estimateHullFeature3d() {
-      const pts = (lastEstimatePoints || []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+      const tied = (lastSurfaceStats && lastSurfaceStats.tied) || [];
+      const pts = (tied.length ? tied : (lastEstimatePoints || []))
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
       const features = [];
       const ring = pts.length >= 3 ? ringFromNodes(pts) : null;
       if (ring) {
@@ -4235,7 +4344,7 @@
       return {
         type: "FeatureCollection",
         features: (lastEstimateGrid || []).map((p) => {
-          const norm = Math.max(0, Math.min(1, Math.exp((p.score ?? 0) - bestLogScore)));
+          const norm = Math.max(0, Math.min(1, Math.exp(((p.score ?? 0) - bestLogScore) / (lastSurfaceScale || 1))));
           const ring = [
             [p.lon - lonStep / 2, p.lat - latStep / 2],
             [p.lon + lonStep / 2, p.lat - latStep / 2],
@@ -4581,7 +4690,7 @@
         show3dPopup(e.lngLat, `
           <div>
             <p class="popup-title">${p.best === 1 || p.best === "1" ? "Best estimate" : `Estimate spot ${p.rank}`}</p>
-            <p class="popup-copy">${formatEstimateLatLon({ lat: Number(p.lat), lon: Number(p.lon) })}<br>typical error ${ESTIMATE_TYPICAL_ERROR_KM} km</p>
+            <p class="popup-copy">${formatEstimateLatLon({ lat: Number(p.lat), lon: Number(p.lon) })}<br>${lastSurfaceStats ? `likely within ${likelyWithinKm(lastSurfaceStats)} km` : ""}</p>
           </div>
         `);
       });

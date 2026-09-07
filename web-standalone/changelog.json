@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-how-sure-is-the-estimate",
+    "date": "2026-09-07",
+    "title": "The estimate now says how sure it is",
+    "body": "The status line used to say 'typical error 2 km' for every estimate. It now says how far the evidence allows the target to be, as 'likely within X km', and what share of the searched area scores the same as the best spot. When that share is 40% or more it says the observers do not pin the target down, and when every observer sits on one side it says from which direction a new observer would help. The heat on the map now covers the whole searched area instead of the 36 best cells, and the dashed outline is the area that ties with the best cell."
+  },
+  {
     "id": "2026-09-07-wide-regions-rank-lower",
     "date": "2026-09-07",
     "title": "A region wider than 30 km ranks lower",
