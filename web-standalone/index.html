@@ -4956,7 +4956,10 @@
       m.on("click", "t3d-obs-circle", (e) => {
         if (dragState || (e.originalEvent && e.originalEvent.__dragged)) return;
         const p = e.features[0].properties;
-        const radius = p.provenRadiusKm === null || p.provenRadiusKm === "null"
+        // A null property does not survive the trip through the GeoJSON
+        // source, so it arrives undefined here; a node without a radius used
+        // to print "NaN km".
+        const radius = !Number.isFinite(Number(p.provenRadiusKm)) || p.provenRadiusKm === null || p.provenRadiusKm === "null"
           ? "" : `<br>Proven-link radius: ${Number(p.provenRadiusKm).toFixed(1)} km`;
         const moved = p.moved === 1 || p.moved === "1";
         const movedLine = moved ? `<br>Moved ${Number(p.movedKm).toFixed(1)} km from its advertised position; range from link count.` : "";
@@ -5027,6 +5030,11 @@
       m.on("mouseleave", "t3d-obs-circle", () => { if (!dragState) m.getCanvas().style.cursor = ""; });
 
       const regionPopup = (e) => {
+        // A region polygon covers its own observers, and every layer under
+        // the point fires; the region's popup would replace the observer's.
+        // The marker under the pointer wins.
+        const markers = m.queryRenderedFeatures(e.point, { layers: ["t3d-obs-circle", "t3d-manual-circle", "t3d-ghost-circle", "t3d-support-circle"] });
+        if (markers.length) return;
         const p = e.features[0].properties;
         const rival = p.rival === 1 || p.rival === "1";
         const popup = show3dPopup(e.lngLat, `
