@@ -1,5 +1,9 @@
 [
   {
+    "id": "2026-09-07-spam-detector-import",
+    "date": "2026-09-07",
+    "title": "Load an incident straight from the spam detector",
+    "body": "Step 1 now has a list of recent incidents from mc-spamdetector.nl and a field for an attack URL or number. Picking one fills the first-hop prefixes with the incident's entry hops, weighted by packets, and finds the region, which used to mean reading the table off the attack page and typing it in. A link with ?incident=2047 does the same."
     "id": "2026-09-07-cluster-km-12",
     "date": "2026-09-07",
     "title": "Cluster km starts at 12 instead of 6",

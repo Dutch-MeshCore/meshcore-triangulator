@@ -27,7 +27,9 @@ README.md              Start here — which component to host, quick start for b
 
 web-standalone/         Self-contained map tool (no DB)
   index.html            Map UI + triangulation logic (Leaflet, vanilla JS, :root CSS tokens)
-  server.py             stdlib-only HTTP server + proxy for upstream feeds (mc-radar, meshcore.io, PDOK)
+  server.py             stdlib-only HTTP server + proxy for upstream feeds (mc-radar, meshcore.io, PDOK, mc-spamdetector.nl)
+  spamdetector.py       parses a spam-detector attack page into Step 1 clues (pure logic, tested)
+  tests/                pytest for the pure logic; fixtures are trimmed copies of real upstream pages
   Dockerfile            Alpine, non-root, stdlib-only
   docker-compose.yml    App + cloudflared sidecar, hardened (read-only rootfs, cap_drop ALL)
   .env.example           TUNNEL_TOKEN, optional image override
@@ -59,7 +61,11 @@ Or via Docker — see the root README's Docker quick-start section.
 
 ### Tests
 
-There is no automated test suite yet. Going forward:
+```bash
+python3 -m pytest web-standalone/tests    # pure-logic tests (spamdetector.py)
+```
+
+Going forward:
 
 - **Do** add unit tests (pytest) for new *pure logic* — clustering, weighted-estimate math,
   clue parsing, coordinate/terrain calculations. Keep such logic in small, importable functions

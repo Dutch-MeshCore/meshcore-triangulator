@@ -57,6 +57,7 @@ control in front if you do; the proxy has no auth of its own.
 | mc-radar Node Inspector | Resolve prefixes; proven links. |
 | map.meshcore.io | Global node feed (fallback). |
 | PDOK AHN | Terrain/surface elevation (NL). |
+| mc-spamdetector.nl | Incident list, and an incident's entry hops as Step 1 clues. |
 | OpenFreeMap | 3D building tiles (no key). |
 
 ### Deep-linking (for other sites/tools)
@@ -72,6 +73,7 @@ result instead of a blank form.
 | `prefixes2` | no | Second-hop clue prefixes, same syntax. |
 | `hop2` | no | Overrides the "2nd-hop km" input (assumed RF reach for 2nd-hop/relayed clues). |
 | `cluster` | no | Overrides the "Cluster km" input (search radius / hull buffer). |
+| `incident` | no | A [mc-spamdetector.nl](https://mc-spamdetector.nl/) attack number, e.g. `2047`. Loads its entry hops as the first-hop clues and runs discovery. Used on its own, without `prefixes`. |
 
 If `prefixes` is present, the page pre-fills Step 1 from these params and
 automatically clicks "Find Best Matching Region" on load — no further

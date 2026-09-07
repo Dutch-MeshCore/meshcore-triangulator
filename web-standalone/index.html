@@ -339,6 +339,28 @@
       color: var(--muted);
     }
     .radius-row input { width: 100%; }
+
+    /* Spam-detector import (#107): the incident list on its own line, the
+       free field and its button on the next. The side panel is ~320 px, so
+       three controls on one row left the list unreadable. */
+    .step-panel select.import-select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(5, 15, 22, 0.9);
+      color: var(--text);
+      padding: 12px;
+      font: inherit;
+      margin-bottom: 8px;
+    }
+    .import-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+    .step-panel .import-row button { margin-top: 0; }
     /* Tighter help text to keep the step panels compact. */
     .step-panel p.hint {
       margin: 6px 0 0;
@@ -1309,6 +1331,15 @@
           <span class="step-kicker">Step 1</span>
           <h3>Clues + Regions</h3>
           <div class="step-body">
+            <label for="incident-select">Load a spam-detector incident (optional)</label>
+            <select id="incident-select" class="import-select" aria-label="Recent incidents on mc-spamdetector.nl">
+              <option value="">Recent incidents…</option>
+            </select>
+            <div class="import-row">
+              <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
+              <button id="incident-load-button" type="button" class="button-secondary">Load</button>
+            </div>
+            <p id="incident-status" class="hint">Fills the first-hop prefixes with the incident's entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>, weighted by packets, then finds the region.</p>
             <label for="prefix-input">First-hop prefixes — heard the source directly</label>
             <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
             <p id="prefix-status" class="hint">`PREFIX` or `PREFIX:count` — 2/4/6 hex, comma-separated. Count = times heard (weight).</p>
@@ -4626,14 +4657,112 @@
     }
 
 
+    // ── Spam-detector import (#107) ─────────────────────────────────────────
+    // An incident on mc-spamdetector.nl lists the repeaters that heard the
+    // sender directly ("Entry hops"), with packet counts. That is Step 1's
+    // first-hop field, `PREFIX:count`, which operators used to copy by hand.
+    // server.py fetches and parses the attack page (spamdetector.py); this
+    // side fills the field and runs discovery, as the `prefixes` deep link
+    // does. Second-hop stays empty on purpose: it is a weaker clue the
+    // operator rarely enters, and the estimate does not score it (#46).
+    const incidentSelect = document.getElementById("incident-select");
+    const incidentInput = document.getElementById("incident-input");
+    const incidentLoadButton = document.getElementById("incident-load-button");
+    const incidentStatus = document.getElementById("incident-status");
+    const INCIDENT_LIST_LIMIT = 15;
+
+    // "2047", "#2047" or "https://mc-spamdetector.nl/attacks/2047": the number
+    // at the end is the incident.
+    function incidentIdFrom(text) {
+      const match = String(text || "").trim().match(/(\d{1,9})\/?\s*$/);
+      return match ? match[1] : null;
+    }
+
+    function incidentLabel(row) {
+      const when = String(row.started_at || "").slice(5, 16);
+      const status = row.status && row.status !== "ended" ? ` · ${row.status}` : "";
+      return `#${row.id} · ${row.type_label || row.type || "incident"} · ${when} · ${row.seen_at || "?"}${status}`;
+    }
+
+    async function loadIncidentList() {
+      if (!incidentSelect) return;
+      try {
+        const response = await fetch("/proxy/spamdetector/alerts");
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const data = await response.json();
+        const rows = (data.rows || []).slice(0, INCIDENT_LIST_LIMIT);
+        rows.forEach((row) => {
+          const option = document.createElement("option");
+          option.value = String(row.id);
+          option.textContent = incidentLabel(row);
+          incidentSelect.appendChild(option);
+        });
+        if (!rows.length && incidentStatus) {
+          incidentStatus.textContent = "The spam detector lists no incidents right now. Paste an attack URL or number instead.";
+        }
+      } catch (error) {
+        if (incidentStatus) incidentStatus.textContent = `The incident list did not load (${error.message}). Paste an attack URL or number instead.`;
+      }
+    }
+
+    async function importIncident(text) {
+      const id = incidentIdFrom(text);
+      if (!id) {
+        if (incidentStatus) incidentStatus.textContent = "Enter an attack URL like https://mc-spamdetector.nl/attacks/2047, or just the number.";
+        return;
+      }
+      if (incidentStatus) incidentStatus.textContent = `Loading incident #${id} from the spam detector...`;
+      if (incidentLoadButton) incidentLoadButton.disabled = true;
+      try {
+        const response = await fetch(`/proxy/spamdetector/incident/${id}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `status ${response.status}`);
+        prefixInput.value = data.prefixes;
+        if (prefix2Input) prefix2Input.value = "";
+        if (incidentInput) incidentInput.value = id;
+        if (incidentSelect) incidentSelect.value = [...incidentSelect.options].some((o) => o.value === id) ? id : "";
+        applyPrefixInput();
+        const count = data.hops.length;
+        if (incidentStatus) {
+          incidentStatus.textContent = `Incident #${id}: ${count} entry hop${count === 1 ? "" : "s"} loaded as first-hop prefixes, weighted by packets. Second-hop left empty.`;
+        }
+        await runCaseDiscovery();
+      } catch (error) {
+        if (incidentStatus) incidentStatus.textContent = `Incident #${id} did not load: ${error.message}`;
+      } finally {
+        if (incidentLoadButton) incidentLoadButton.disabled = false;
+      }
+    }
+
+    if (incidentSelect) {
+      incidentSelect.addEventListener("change", () => {
+        if (incidentSelect.value) importIncident(incidentSelect.value);
+      });
+    }
+    if (incidentLoadButton && incidentInput) {
+      incidentLoadButton.addEventListener("click", () => importIncident(incidentInput.value));
+      incidentInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          importIncident(incidentInput.value);
+        }
+      });
+    }
+
     // Deep-link support (#10): ?prefixes=db:30,23&prefixes2=a0:8,fc&hop2=10&cluster=6
     // pre-fills Step 1 from the URL so external sites can link straight into a
     // query. Auto-runs discovery when `prefixes` is present, so the link lands
     // the visitor on a live result rather than just a pre-filled form.
+    // ?incident=2047 loads that spam-detector incident instead (#107); the
+    // import runs discovery itself, so it returns false here.
     function applyDeepLinkParams() {
       const params = new URLSearchParams(window.location.search);
       const prefixes = params.get("prefixes");
-      if (!prefixes) return false;
+      if (!prefixes) {
+        const incident = params.get("incident");
+        if (incident) importIncident(incident);
+        return false;
+      }
       prefixInput.value = prefixes;
       const prefixes2 = params.get("prefixes2");
       if (prefixes2 && prefix2Input) prefix2Input.value = prefixes2;
@@ -4689,6 +4818,7 @@
 
     const showIntro = !introSeen();
     const deepLinked = applyDeepLinkParams();
+    loadIncidentList();
     applyPrefixInput();
     if (deepLinked) {
       // First-timers get the explainer as their wait screen; everyone else
