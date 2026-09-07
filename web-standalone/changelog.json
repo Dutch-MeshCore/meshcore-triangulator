@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-waiting-for-proven-links",
+    "date": "2026-09-07",
+    "title": "Choosing a region shows what it is waiting for",
+    "body": "Picking a region pulls proven links from mc-radar for up to 14 nodes, which takes a few seconds. The page now shows the same loading overlay a shared link uses, saying which region it is pulling links for, until the cluster is locked."
+  },
+  {
     "id": "2026-09-07-map-layers",
     "date": "2026-09-07",
     "title": "Ranges, links and heat can be switched off",

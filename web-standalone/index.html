@@ -1035,7 +1035,7 @@
        auto-triggered discovery is in flight. Fixed over the whole viewport
        (not scoped to the map, which sits below Step 1/2/3 on load) so it's
        visible immediately regardless of scroll position or screen size. */
-    #deep-link-splash {
+    #loading-overlay {
       position: fixed;
       inset: 0;
       z-index: 5000;
@@ -1046,7 +1046,7 @@
        selector specificity — an ID rule setting `display` unconditionally
        would beat it and stay visible even when hidden. Keep display
        conditional on :not([hidden]) instead. */
-    #deep-link-splash:not([hidden]) {
+    #loading-overlay:not([hidden]) {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1058,7 +1058,7 @@
     #intro-overlay {
       position: fixed;
       inset: 0;
-      z-index: 5100;         /* above #deep-link-splash (5000) */
+      z-index: 5100;         /* above #loading-overlay (5000) */
       background: rgba(7, 17, 24, 0.62);
       backdrop-filter: blur(3px);
       padding: 16px;
@@ -1196,7 +1196,7 @@
       cursor: pointer;
     }
 
-    .deep-link-splash-card {
+    .loading-card {
       width: min(260px, 80%);
       padding: 20px;
       border-radius: 20px;
@@ -1205,7 +1205,7 @@
       box-shadow: var(--shadow);
       text-align: center;
     }
-    .deep-link-spinner {
+    .loading-spinner {
       width: 28px;
       height: 28px;
       margin: 0 auto 12px;
@@ -1217,13 +1217,13 @@
     @keyframes deep-link-spin {
       to { transform: rotate(360deg); }
     }
-    .deep-link-splash-card p {
+    .loading-card p {
       margin: 0;
       font-size: 0.82rem;
       font-weight: 500;
       color: var(--text);
     }
-    .deep-link-splash-card p.deep-link-splash-sub {
+    .loading-card p.loading-sub {
       margin-top: 6px;
       font-size: 0.72rem;
       font-weight: 400;
@@ -1352,11 +1352,11 @@
   </style>
 </head>
 <body>
-  <div id="deep-link-splash" hidden>
-    <div class="deep-link-splash-card">
-      <div class="deep-link-spinner"></div>
-      <p>Loading your shared link…</p>
-      <p class="deep-link-splash-sub">Resolving prefixes and finding the best matching region</p>
+  <div id="loading-overlay" hidden>
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <p id="loading-title">Loading your shared link…</p>
+      <p id="loading-sub" class="loading-sub">Resolving prefixes and finding the best matching region</p>
     </div>
   </div>
 
@@ -1402,7 +1402,7 @@
 
       <div class="intro-foot">
         <span id="intro-loading" class="intro-loading" hidden>
-          <span class="deep-link-spinner intro-spinner"></span>
+          <span class="loading-spinner intro-spinner"></span>
           <span>Loading the shared search…</span>
         </span>
         <span id="intro-hint" class="intro-hint">Reopen anytime with <strong>?</strong></span>
@@ -1554,7 +1554,32 @@
     const whatsNewDot = document.getElementById("whats-new-dot");
     const whatsNewPanel = document.getElementById("whats-new-panel");
     const whatsNewList = document.getElementById("whats-new-list");
-    const deepLinkSplash = document.getElementById("deep-link-splash");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const loadingTitle = document.getElementById("loading-title");
+    const loadingSub = document.getElementById("loading-sub");
+    // The loading overlay (#121): a spinner, a title and one line on what is
+    // being waited for, over the whole page. Used for a shared link while it
+    // resolves, and for a region while its proven links are pulled. A token
+    // ties each hide to its own show, so a stale run finishing late cannot
+    // take down a newer one's overlay.
+    let loadingToken = 0;
+    function showLoading(title, sub) {
+      loadingToken += 1;
+      if (loadingTitle) loadingTitle.textContent = title;
+      if (loadingSub) loadingSub.textContent = sub || "";
+      if (loadingOverlay) loadingOverlay.hidden = false;
+      return loadingToken;
+    }
+    function hideLoading(token = loadingToken) {
+      if (token !== loadingToken) return;
+      if (loadingOverlay) loadingOverlay.hidden = true;
+    }
+    function regionLoadingText(rank) {
+      return [
+        `Pulling proven links for region ${rank}…`,
+        `Asking mc-radar which repeaters heard each other, up to ${PROVEN_LINK_NODE_BUDGET} nodes`
+      ];
+    }
     const discoverStatus = document.getElementById("discover-status");
     const clusterStatus = document.getElementById("cluster-status");
     const candidateList = document.getElementById("candidate-list");
@@ -2695,7 +2720,8 @@
       if (manualMode) setManualMode(false);
       restoreCandidateChoice();
       discoverStatus.textContent = `Switching to region ${region.rank} and pulling proven links...`;
-      activateCandidateRegion(region);
+      const token = showLoading(...regionLoadingText(region.rank));
+      activateCandidateRegion(region).finally(() => hideLoading(token));
     }
 
     // ── Drag to reposition (#33b) ───────────────────────────────────────────
@@ -4161,7 +4187,8 @@
             return;
           }
           discoverStatus.textContent = `Selecting cluster ${candidate.rank} and pulling proven links...`;
-          activateCandidateRegion(candidate);
+          const token = showLoading(...regionLoadingText(candidate.rank));
+          activateCandidateRegion(candidate).finally(() => hideLoading(token));
         });
         candidateList.appendChild(button);
       });
@@ -4291,7 +4318,7 @@
         if (runId === discoveryRunId) {
           discoverButton.disabled = false;
         }
-        if (deepLinkSplash) deepLinkSplash.hidden = true;
+        hideLoading();
         introLoadingDone();
         syncControlStates();
       }
@@ -5515,7 +5542,7 @@
       // First-timers get the explainer as their wait screen; everyone else
       // keeps the plain auto-dismissing splash from #26.
       if (showIntro) openIntro(true);
-      else if (deepLinkSplash) deepLinkSplash.hidden = false;
+      else showLoading("Loading your shared link…", "Resolving prefixes and finding the best matching region");
       discoverButton.click();
     } else if (showIntro) {
       openIntro(false);
