@@ -2270,7 +2270,17 @@
       const uniqueCoverage = uniquePrefixCount(component.nodes);
       const linkBonus = component.nodes.reduce((sum, node) => sum + Math.min(node.link_count || 0, 20) / 20, 0);
       const compactness = 1 / Math.max(component.maxPairKm || 1, 1);
-      return weightedCoverage + (uniqueCoverage * 1.4) + linkBonus + (compactness * 8);
+      // A component wider than the largest range an observer can have is a
+      // chain, not a region (#103, #85). With Cluster km at 12, decoys
+      // resolved from 2-hex prefixes chain into components of 30-55 nodes
+      // over 60-70 km that outrank the real cluster on raw hits (228B5F32:
+      // 83.1 against 82.9; 57316DFB: 148 against 117). Scaling by
+      // MAX_ANCHOR_RANGE_KM / span fixes both and changes nothing else:
+      // --prefix 2 paired 2 better / 0 worse / 90 unchanged, default and
+      // --hop1-only identical on every case. 40 km measures the same, 20 km
+      // regresses in both modes.
+      const spanScale = Math.min(1, MAX_ANCHOR_RANGE_KM / Math.max(component.maxPairKm || 1, 1));
+      return (weightedCoverage + (uniqueCoverage * 1.4) + linkBonus + (compactness * 8)) * spanScale;
     }
 
     // Hop-aware grouping (#15): the strict thresholdKm (Cluster km) applies
