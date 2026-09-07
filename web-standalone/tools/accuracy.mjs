@@ -15,10 +15,12 @@
 //
 // Cases carry 1st- AND 2nd-hop observers. 2nd-hop nodes are built the way
 // runCaseDiscovery()/applyHopRadii() build them (SECOND_HOP_WEIGHT_FACTOR on the
-// weight, the 2nd-hop km input as hopRadiusKm), so the paths #46, #65, #66 and
-// #67 are about are actually entered. --hop1-only re-runs without them,
-// which is how you tell "this change did nothing" from "this change was never
-// exercised": the two runs must differ.
+// weight, the 2nd-hop km input as hopRadiusKm), so the paths #65, #66 and #67
+// are about are actually entered. scorePoint() skips 2nd-hop nodes (#46), so
+// in the default run they shape the cluster and the grid but not the score.
+// --hop1-only re-runs without them entirely, which is how you tell "this
+// change did nothing" from "this change was never exercised": the two runs
+// must differ.
 //
 // The scoring functions are EXTRACTED FROM index.html rather than reimplemented,
 // so this cannot drift from what ships. Only the grid sweep is mirrored here,
@@ -266,7 +268,9 @@ function prepare(observers, hop) {
     // applyHopRadii(): 2nd-hop nodes carry the hop input, 1st-hop nodes carry
     // none. anchorRangeKm() reads hopRadiusKm FIRST, so this also suppresses
     // any provenRadiusKm set just above. That precedence is #67's point 3, and
-    // it is only visible here because the fixture now has both.
+    // it is only visible here because the fixture now has both. Since #46
+    // scorePoint() never asks anchorRangeKm() about a 2nd-hop node, so the
+    // value is stamped for fidelity, not effect.
     if (hop === 2) node.hopRadiusKm = HOP2_KM;
     return node;
   });
@@ -428,15 +432,17 @@ report("  nearest observer < 5 km", results.filter((r) => r.nearestObserverKm < 
 report("  nearest observer >= 5 km", results.filter((r) => r.nearestObserverKm >= 5).map((r) => r.errorKm));
 console.log();
 // The stratum that says whether a 2nd-hop change was measured at all. A change
-// to #46/#65/#66/#67 that moves nothing here moved nothing anywhere, and a
+// to #65/#66/#67 that moves nothing here moved nothing anywhere, and a
 // --compare over the whole set would have reported that as "no regression".
+// "In the cluster" rather than "scored": scorePoint() skips 2nd-hop nodes
+// (#46), so what they change in the default run is the cluster and the grid.
 const withSecond = results.filter((r) => r.secondHopScored > 0);
-report("  scored 1st-hop only", results.filter((r) => r.secondHopScored === 0).map((r) => r.errorKm));
-report("  scored some 2nd-hop", withSecond.map((r) => r.errorKm));
+report("  cluster has 1st-hop only", results.filter((r) => r.secondHopScored === 0).map((r) => r.errorKm));
+report("  cluster has 2nd-hop nodes", withSecond.map((r) => r.errorKm));
 const secondScored = results.reduce((sum, r) => sum + r.secondHopScored, 0);
 const secondOffered = results.reduce((sum, r) => sum + r.secondHopOffered, 0);
-console.log(`  2nd-hop observers scored: ${secondScored} of ${secondOffered} offered ` +
-  `(rest fell outside the rank-1 cluster)`);
+console.log(`  2nd-hop observers in the rank-1 cluster: ${secondScored} of ${secondOffered} offered ` +
+  `(rest fell outside it); none scored, see #46`);
 
 // Is the argmax pinning anything down? Reported alongside the error, because
 // an error distribution alone cannot tell a model that is right from one that

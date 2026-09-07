@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-second-hop-not-scored",
+    "date": "2026-09-07",
+    "title": "2nd-hop observers no longer pull the estimate",
+    "body": "A node that heard the target at 2 hops was scored as if the target sat within 10 km of it. It is not: the target is within reach of some relay that is within reach of that node. 2nd-hop observers still show on the map and still shape the cluster, but the estimate now uses 1st-hop observers only, and the status line says how many were left out. On the accuracy fixture the median error goes from 2.3 to 2.0 km."
+  },
+  {
     "id": "2026-08-19-step-one-first",
     "date": "2026-08-19",
     "title": "Step 1 is the first thing you see",
