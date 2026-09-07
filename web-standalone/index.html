@@ -659,6 +659,22 @@
     .manual-banner[hidden] {
       display: none;
     }
+    .manual-banner button {
+      margin: 0;
+      padding: 3px 9px;
+      border: 1px solid rgba(155, 229, 100, 0.6);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .manual-banner button[hidden] {
+      display: none;
+    }
 
     .manual-banner::before {
       content: "";
@@ -1434,6 +1450,7 @@
         <div id="map3d" aria-label="Map showing repeater locations"></div>
         <div id="manual-banner" class="manual-banner" role="status" hidden>
           <span id="manual-banner-text">Resolve on map</span>
+          <button id="manual-reset-button" type="button" hidden>Reset picks</button>
         </div>
       </section>
     </div>
@@ -1469,6 +1486,7 @@
     const terrainExaggerationValue = document.getElementById("terrain-exaggeration-value");
     const manualBanner = document.getElementById("manual-banner");
     const manualBannerText = document.getElementById("manual-banner-text");
+    const manualResetButton = document.getElementById("manual-reset-button");
     const mapWrap = document.getElementById("map-wrap");
     const clusterEditorStatus = document.getElementById("cluster-editor-status");
     const changeClusterButton = document.getElementById("change-cluster-button");
@@ -2430,6 +2448,104 @@
       return groups;
     }
 
+    // The node dedupeByPrefix() kept for a group: the one in the pool that
+    // was not set aside as a duplicate (or as outside the hull). Null when
+    // every candidate carries a reason, which happens for a prefix the
+    // operator added by hand.
+    function autoPickFor(group) {
+      return group.nodes.find((node) => !observerExclusionReasons.has(nodeId(node))) || null;
+    }
+
+    // Groups whose pick in force is not the automatic one (#33).
+    function changedPickGroups(groups = duplicateCandidateGroups()) {
+      return groups.filter((group) => {
+        const auto = autoPickFor(group);
+        const active = group.active[0];
+        return auto && active && nodeId(auto) !== nodeId(active);
+      });
+    }
+
+    // Put every ambiguous prefix back on its automatic pick, through the same
+    // editor path a map click uses, so weights carry over and "Apply Inside
+    // Locked Cluster" stays the one way changes reach the estimate.
+    function resetDuplicatePicks() {
+      const groups = changedPickGroups();
+      groups.forEach((group) => selectDuplicateCandidate(group, autoPickFor(group)));
+      renderManualLayer();
+      if (groups.length) {
+        clusterEditorStatus.textContent = `${groups.length} prefix${groups.length === 1 ? "" : "es"} back on the automatic pick. Apply to re-run the estimate.`;
+      }
+    }
+
+    // Prefix ambiguity of a candidate region: how many of its prefixes also
+    // resolve inside another candidate region (#33). That is how much there is
+    // to choose, never which region is right; correctness is not knowable from
+    // the data the app has (#85).
+    function regionAmbiguity(candidate, regions = lastDiscoveredCandidateRegions.length ? lastDiscoveredCandidateRegions : currentCandidateRegions) {
+      const own = new Set(candidate.nodes.map((node) => String(obsPrefix(node)).toLowerCase()));
+      const elsewhere = new Set();
+      regions.forEach((other) => {
+        if (other.id === candidate.id) return;
+        other.nodes.forEach((node) => elsewhere.add(String(obsPrefix(node)).toLowerCase()));
+      });
+      const shared = [...own].filter((prefix) => elsewhere.has(prefix)).length;
+      return { shared, total: own.size };
+    }
+
+    function ambiguityText(shared, total) {
+      if (!total) return "";
+      return shared
+        ? `${shared} of ${total} prefix${total === 1 ? "" : "es"} also in another region`
+        : "no prefix shared with another region";
+    }
+
+    // The regions to draw: the candidates on offer, or, once one is locked
+    // and the operator is resolving on the map, that one plus the other
+    // candidates from the same discovery as rivals (#33). A rival can be
+    // switched to from its popup.
+    function regionsToDraw() {
+      if (manualMode && currentResolvedContext && lastDiscoveredCandidateRegions.length > 1) {
+        const lockedIds = new Set((currentCandidateRegions || []).map((c) => c.id));
+        return [
+          ...(currentCandidateRegions || []).map((c) => ({ candidate: c, rival: 0 })),
+          ...lastDiscoveredCandidateRegions.filter((c) => !lockedIds.has(c.id)).map((c) => ({ candidate: c, rival: 1 }))
+        ];
+      }
+      return (currentCandidateRegions || []).map((c) => ({ candidate: c, rival: 0 }));
+    }
+
+    // Back to the candidate list, as "Choose Another Cluster" does. Shared
+    // with the rival popup's switch so there is one way to leave a region.
+    function restoreCandidateChoice() {
+      currentCandidateRegions = lastDiscoveredCandidateRegions.slice();
+      selectedCandidateRegionId = null;
+      currentMatchedNodes = [];
+      currentSupportNodes = [];
+      currentRfAnchors = [];
+      currentResolvedContext = null;
+      hasObserverEstimate = false;
+      currentProvenLinks = [];
+      lockedObserverPool = [];
+      clearEstimateSurface();
+      clearClueZone();
+      refresh3dData();
+      setClusterEditorVisible(false);
+      clusterAddPrefixInput.value = "";
+      observerEditor.innerHTML = "";
+      setDiscoveryCollapsed(false);
+      renderCandidateList();
+      syncControlStates();
+    }
+
+    function switchToRegion(regionId) {
+      const region = lastDiscoveredCandidateRegions.find((c) => c.id === regionId);
+      if (!region) return;
+      if (manualMode) setManualMode(false);
+      restoreCandidateChoice();
+      discoverStatus.textContent = `Switching to region ${region.rank} and pulling proven links...`;
+      activateCandidateRegion(region);
+    }
+
     // Flip the editor's checkboxes so `node` represents `prefix` and the
     // others in its group do not. Returns false when the DOM rows are not
     // present, which is the case before a cluster is locked.
@@ -2479,9 +2595,15 @@
       manualBanner.hidden = !manualMode;
       if (!manualMode) return;
       const others = groups.reduce((sum, g) => sum + Math.max(0, g.nodes.length - 1), 0);
-      manualBannerText.textContent = groups.length
+      const changed = changedPickGroups(groups).length;
+      const rivals = lastDiscoveredCandidateRegions.length > 1 ? lastDiscoveredCandidateRegions.length - 1 : 0;
+      const rivalNote = rivals ? ` ${rivals} other region${rivals === 1 ? "" : "s"} outlined; click one to switch.` : "";
+      manualBannerText.textContent = (groups.length
         ? `${groups.length} ambiguous prefix${groups.length === 1 ? "" : "es"}, ${others} other candidate${others === 1 ? "" : "s"} shown. Click one to use it.`
-        : "No prefix in this cluster has more than one candidate.";
+        : "No prefix in this cluster has more than one candidate.")
+        + (changed ? ` ${changed} changed from the automatic pick.` : "")
+        + rivalNote;
+      if (manualResetButton) manualResetButton.hidden = !changed;
     }
 
     function setManualMode(on) {
@@ -3739,6 +3861,7 @@
           <strong>Region ${candidate.rank}</strong>
           <span>${uniquePrefixCount(candidate.nodes)} clue prefixes, ${candidate.nodes.length} hits</span>
           <span>${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)} · radius ${candidate.radiusKm.toFixed(0)} km · span ${candidate.maxPairKm.toFixed(1)} km</span>
+          <span>${(() => { const a = regionAmbiguity(candidate); return ambiguityText(a.shared, a.total); })()}</span>
         `;
         button.addEventListener("click", () => {
           // Live comparison, not the captured isSelected: the flag above is a
@@ -4010,27 +4133,13 @@
     // map redraws from the editor rather than keeping its own copy (#33).
     observerEditor.addEventListener("change", () => renderManualLayer());
 
+    if (manualResetButton) manualResetButton.addEventListener("click", resetDuplicatePicks);
     if (manualModeButton) {
       manualModeButton.addEventListener("click", () => setManualMode(!manualMode));
     }
     changeClusterButton.addEventListener("click", () => {
-      currentCandidateRegions = lastDiscoveredCandidateRegions.slice();
-      selectedCandidateRegionId = null;
-      currentMatchedNodes = [];
-      currentSupportNodes = [];
-      currentRfAnchors = [];
-      currentResolvedContext = null;
-      hasObserverEstimate = false;
-      currentProvenLinks = [];
-      lockedObserverPool = [];
-      clearEstimateSurface();
-      clearClueZone();
-      refresh3dData();
-      setClusterEditorVisible(false);
-      clusterAddPrefixInput.value = "";
-      observerEditor.innerHTML = "";
-      setDiscoveryCollapsed(false);
-      renderCandidateList();
+      if (manualMode) setManualMode(false);
+      restoreCandidateChoice();
       fitMapToCandidates(currentCandidateRegions);
       discoverStatus.textContent = "Choose a different cluster to continue.";
       terrainStatus.textContent = "Step 3 unlocks after you choose a cluster and pull its proven links.";
@@ -4140,13 +4249,18 @@
 
     function candidateFeatures3d() {
       const features = [];
-      (currentCandidateRegions || []).forEach((candidate) => {
+      regionsToDraw().forEach(({ candidate, rival }) => {
         const selected = candidate.id === selectedCandidateRegionId ? 1 : 0;
+        const ambiguity = regionAmbiguity(candidate);
         const props = {
           selected,
+          rival,
+          regionId: candidate.id,
           rank: candidate.rank,
           prefixes: uniquePrefixCount(candidate.nodes),
-          hits: candidate.nodes.length
+          hits: candidate.nodes.length,
+          shared: ambiguity.shared,
+          total: ambiguity.total
         };
         // Candidate outline from its 1st-hop nodes (#65), same as the clue zone.
         const outlineNodes = firstHopNodes(candidate.nodes);
@@ -4167,16 +4281,21 @@
     function candidateCentroidFeatures3d() {
       return {
         type: "FeatureCollection",
-        features: (currentCandidateRegions || []).map((candidate) => {
+        features: regionsToDraw().map(({ candidate, rival }) => {
           const centroid = centroidOfNodes(candidate.nodes);
+          const ambiguity = regionAmbiguity(candidate);
           return {
             type: "Feature",
             geometry: { type: "Point", coordinates: [centroid.lon, centroid.lat] },
             properties: {
               selected: candidate.id === selectedCandidateRegionId ? 1 : 0,
+              rival,
+              regionId: candidate.id,
               rank: candidate.rank,
               prefixes: uniquePrefixCount(candidate.nodes),
               hits: candidate.nodes.length,
+              shared: ambiguity.shared,
+              total: ambiguity.total,
               lat: centroid.lat, lon: centroid.lon
             }
           };
@@ -4208,6 +4327,7 @@
               properties: {
                 prefix: group.prefix,
                 nodeKey: nodeId(node),
+                auto: autoPickFor(group) && nodeId(autoPickFor(group)) === nodeId(node) ? 1 : 0,
                 title: node.adv_name || node.name || "Unnamed node",
                 lat: node.lat, lon: node.lon,
                 shareCount: group.nodes.length,
@@ -4498,7 +4618,7 @@
         filter: ["==", ["geometry-type"], "Polygon"],
         paint: {
           "fill-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
-          "fill-opacity": ["case", ["==", ["get", "selected"], 1], 0.12, 0.07]
+          "fill-opacity": ["case", ["==", ["get", "selected"], 1], 0.12, ["==", ["get", "rival"], 1], 0.04, 0.07]
         }
       });
       m.addLayer({
@@ -4506,7 +4626,7 @@
         paint: {
           "line-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
           "line-width": ["case", ["==", ["get", "selected"], 1], 3, 2],
-          "line-opacity": 0.9
+          "line-opacity": ["case", ["==", ["get", "rival"], 1], 0.5, 0.9]
         }
       });
       m.addSource("t3d-candidate-pts", { type: "geojson", data: candidateCentroidFeatures3d() });
@@ -4515,7 +4635,8 @@
         paint: {
           "circle-radius": ["case", ["==", ["get", "selected"], 1], 9, 7],
           "circle-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
-          "circle-stroke-color": "#ffffff", "circle-stroke-width": 2, "circle-opacity": 0.95
+          "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+          "circle-opacity": ["case", ["==", ["get", "rival"], 1], 0.6, 0.95]
         }
       });
       m.addSource("t3d-links", { type: "geojson", data: linkFeatures3d() });
@@ -4653,12 +4774,16 @@
 
       const regionPopup = (e) => {
         const p = e.features[0].properties;
-        show3dPopup(e.lngLat, `
+        const rival = p.rival === 1 || p.rival === "1";
+        const popup = show3dPopup(e.lngLat, `
           <div>
-            <p class="popup-title">Region ${p.rank}</p>
-            <p class="popup-copy">${p.prefixes} clue prefixes<br>${p.hits} hits</p>
+            <p class="popup-title">Region ${p.rank}${rival ? " · not locked" : ""}</p>
+            <p class="popup-copy">${p.prefixes} clue prefixes<br>${p.hits} hits<br>${ambiguityText(Number(p.shared), Number(p.total))}</p>
+            ${rival ? `<button type="button" class="link-remove-btn" data-switchregion="${p.regionId}">Switch to this region</button>` : ""}
           </div>
         `);
+        const btn = popup.getElement().querySelector("[data-switchregion]");
+        if (btn) btn.addEventListener("click", () => { popup.remove(); switchToRegion(p.regionId); });
       };
       m.on("click", "t3d-candidates-fill", regionPopup);
       m.on("click", "t3d-candidate-pts-circle", regionPopup);
@@ -4667,11 +4792,12 @@
         const p = e.features[0].properties;
         const apart = p.apartKm === null || p.apartKm === "null"
           ? "" : `<br>${Number(p.apartKm).toFixed(1)} km from the one in use`;
+        const isAuto = p.auto === 1 || p.auto === "1";
         const popup = show3dPopup(e.lngLat, `
           <div>
-            <p class="popup-title">${p.prefix} · other candidate</p>
+            <p class="popup-title">${p.prefix} · ${isAuto ? "automatic pick" : "other candidate"}</p>
             <p class="popup-copy">${p.title}<br>${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>${p.shareCount} nodes share this prefix${apart}</p>
-            <button type="button" class="link-remove-btn" data-usenode="${p.nodeKey}">Use this one for ${p.prefix}</button>
+            <button type="button" class="link-remove-btn" data-usenode="${p.nodeKey}">${isAuto ? `Back to the automatic pick for ${p.prefix}` : `Use this one for ${p.prefix}`}</button>
           </div>
         `);
         const btn = popup.getElement().querySelector("[data-usenode]");
