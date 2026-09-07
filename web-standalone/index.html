@@ -10,6 +10,12 @@
     crossorigin=""
   >
   <style>
+    /* The hidden attribute wins over any display rule. Without this a
+       label or banner with its own display: block stayed on screen while
+       carrying hidden (#124); several places worked around it locally. */
+    [hidden] {
+      display: none !important;
+    }
     :root {
       --bg: #08141b;
       --panel: rgba(7, 25, 35, 0.88);
@@ -5686,6 +5692,15 @@
       if (!introOverlay || introOverlay.hidden) return;
       introOverlay.hidden = true;
       markIntroSeen();
+      focusFirstInput();
+    }
+
+    // A fresh visit starts in the first-hop field (#124). preventScroll keeps
+    // a phone from jumping the page to the field on load; the flow's own
+    // scrolls (#118) take over from there.
+    function focusFirstInput() {
+      if (!prefixInput || prefixInput.value) return;
+      try { prefixInput.focus({ preventScroll: true }); } catch (error) { prefixInput.focus(); }
     }
     function introLoadingDone() {
       if (!introOverlay || introOverlay.hidden || !introLoading || introLoading.hidden) return;
@@ -5717,6 +5732,8 @@
       discoverButton.click();
     } else if (showIntro) {
       openIntro(false);
+    } else if (!new URLSearchParams(window.location.search).get("incident")) {
+      focusFirstInput();
     }
 
     // "What's new" changelog (#22): loads web-standalone/changelog.json,
@@ -5728,7 +5745,9 @@
       const SEEN_KEY = "changelog:lastSeenId";
       let entries = [];
       try {
-        entries = await fetch("changelog.json").then((r) => r.json());
+        // Revalidate every time: with the default the browser kept yesterday's
+        // file for hours and What's new showed old entries (#124).
+        entries = await fetch("changelog.json", { cache: "no-cache" }).then((r) => r.json());
       } catch (error) {
         whatsNewButton.hidden = true;
         return;
