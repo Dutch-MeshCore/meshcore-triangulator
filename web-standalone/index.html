@@ -1317,7 +1317,7 @@
             <p id="prefix2-status" class="hint">Weaker, wider clue. Down-weighted automatically.</p>
             <div class="radius-row">
               <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
-              <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="6"></label>
+              <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
             </div>
             <button id="discover-button" type="button">Find Best Matching Region</button>
             <p id="discover-status" class="hint">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
@@ -1583,8 +1583,18 @@
     }
 
     function getRegionRadiusKm() {
-      const parsed = Number.parseFloat(regionRadiusInput.value || "6");
-      return clamp(Number.isFinite(parsed) ? parsed : 6, 1, 200);
+      // Default 12, one DEFAULT_ANCHOR_RANGE_KM: two observers within one
+      // assumed reach of each other belong to the same cluster (#103). It was
+      // 6, which split the 1st-hop observers of one target in 64 of 92
+      // fixture cases; a 2nd-hop node between them was what joined them.
+      // Paired on the fixture, 6 -> 12: 12 better / 10 worse / 66 unchanged,
+      // mean -0.52 km; without 2nd-hop observers 22 / 15 / 40, mean -0.67,
+      // and 8 more cases get an estimate at all. 10, 15 and 20 km and an
+      // edge from each node's link_count reach were measured too; 12 has the
+      // smallest worst case in both modes. Also the hull buffer for 2nd-hop
+      // inclusion (filterToHullShape) and the radius on the candidate cards.
+      const parsed = Number.parseFloat(regionRadiusInput.value || "12");
+      return clamp(Number.isFinite(parsed) ? parsed : 12, 1, 200);
     }
 
 
@@ -2234,7 +2244,9 @@
 
     // Hop-aware grouping (#15): the strict thresholdKm (Cluster km) applies
     // between two 1st-hop nodes — that's what defines a region. An edge
-    // touching a 2nd-hop node is widened to wideThresholdKm (hop2 km) so a
+    // touching a 2nd-hop node is widened to wideThresholdKm (hop2 km), which
+    // only matters when it exceeds Cluster km: at the defaults (12 and 10)
+    // both edges are 12 km (#103). The widening exists so a
     // legitimately-relevant but farther-out 2nd-hop clue isn't dropped from
     // the candidate before the hull-shaped refinement (activateCandidateRegion)
     // ever gets a chance to evaluate it against real proven-link evidence.
