@@ -60,6 +60,7 @@ const extracted = [
   grab(/function percentile\(values, p\) \{[\s\S]*?\n    \}/, "percentile"),
   grab(/const DEFAULT_ANCHOR_RANGE_KM = \d+;/, "DEFAULT_ANCHOR_RANGE_KM"),
   grab(/const PROVEN_RADIUS_PERCENTILE = [\d.]+;/, "PROVEN_RADIUS_PERCENTILE"),
+  grab(/const MAX_ANCHOR_RANGE_KM = \d+;/, "MAX_ANCHOR_RANGE_KM"),
   grab(/const MAX_PLAUSIBLE_LINK_KM = \d+;/, "MAX_PLAUSIBLE_LINK_KM"),
   grab(/const MEASURED_LINK_QUORUM = \d+;/, "MEASURED_LINK_QUORUM"),
   grab(/const MEASURED_CEILING_SLACK = [\d.]+;/, "MEASURED_CEILING_SLACK"),
