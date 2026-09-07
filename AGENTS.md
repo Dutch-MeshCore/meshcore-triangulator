@@ -30,6 +30,7 @@ web-standalone/         Self-contained map tool (no DB)
   changelog.json        "What's new" entries, newest first; every user-visible change adds one
   server.py             stdlib-only HTTP server + proxy for upstream feeds (mc-radar, meshcore.io, PDOK, mc-spamdetector.nl)
   spamdetector.py       parses a spam-detector attack page into Step 1 clues (pure logic, tested)
+  bag3d.py              3D BAG: RD conversion, footprints, the tallest roof within reach of a node (pure logic, tested)
   tests/                pytest for the pure logic; fixtures are trimmed copies of real upstream pages
   tools/                accuracy.mjs (estimator error against known targets), its fixture, build-fixture.py
   Dockerfile            Alpine, non-root, stdlib-only
@@ -179,7 +180,7 @@ new hardcoded hex values.
 
 ### Don't hammer upstream feeds per-node
 
-The proxied upstream APIs (mc-radar, map.meshcore.io, PDOK, mc-spamdetector.nl) are third-party
+The proxied upstream APIs (mc-radar, map.meshcore.io, PDOK, mc-spamdetector.nl, 3D BAG) are third-party
 and rate-limitable; mc-radar answers 429 after a few hundred proven-link fetches in a day.
 Batch/cache lookups (as the existing code does, including the in-memory cache in `server.py`
 for the spam detector) rather than firing one request per node/prefix.

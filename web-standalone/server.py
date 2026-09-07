@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 
+import bag3d
 import spamdetector
 
 
@@ -45,6 +46,32 @@ SPAMDETECTOR_ALERTS_TTL = 120
 SPAMDETECTOR_INCIDENT_TTL = 600
 SPAMDETECTOR_CACHE_SIZE = 20
 INCIDENT_ID = re.compile(r"^[0-9]{1,9}$")
+
+# 3D BAG (#74): the tallest building within BAG3D_RADIUS_M of a repeater,
+# for its antenna height. The API pages at 100 features; a 100 m box holds
+# up to about 100 buildings in a Dutch town centre, so up to BAG3D_MAX_PAGES
+# are followed.
+# Keyed on the rounded position; buildings do not move, so the cache lives a
+# day.
+BAG3D_ITEMS_URL = "https://api.3dbag.nl/collections/pand/items?bbox={bbox}&limit=100"
+BAG3D_RADIUS_M = 50
+BAG3D_MAX_PAGES = 4
+BAG3D_TTL = 86400
+
+
+def _bag3d_pages(url):
+    """Every page of a 3D BAG items query, following rel=next, capped."""
+    pages = []
+    next_url = url
+    while next_url and len(pages) < BAG3D_MAX_PAGES:
+        page = json.loads(_fetch(next_url).decode("utf-8", "replace"))
+        pages.append(page)
+        next_url = None
+        for link in page.get("links") or []:
+            if link.get("rel") == "next" and link.get("href"):
+                next_url = link["href"]
+                break
+    return pages
 
 _cache = {}
 _cache_lock = threading.Lock()
@@ -107,7 +134,34 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/proxy/spamdetector/incident/"):
             self._spamdetector_incident(self.path[len("/proxy/spamdetector/incident/"):])
             return
+        if self.path.startswith("/proxy/3dbag/roof?"):
+            self._bag3d_roof(self.path.split("?", 1)[1])
+            return
         super().do_GET()
+
+    def _bag3d_roof(self, query):
+        params = dict(part.split("=", 1) for part in query.split("&") if "=" in part)
+        try:
+            lat = float(params.get("lat", ""))
+            lon = float(params.get("lon", ""))
+        except ValueError:
+            self._send_json({"error": "lat and lon must be numbers"}, 400)
+            return
+        if not (50.0 <= lat <= 54.0 and 3.0 <= lon <= 7.5):
+            # Outside the Netherlands there is no 3D BAG; not an error, no roof.
+            self._send_json({"roof_m": None, "building": None, "buildings": 0, "covered": False}, 200)
+            return
+        key = "bag3d:%.5f,%.5f" % (lat, lon)
+        url = BAG3D_ITEMS_URL.format(bbox=bag3d.bbox_around(lat, lon, BAG3D_RADIUS_M))
+        try:
+            result = _cached(key, BAG3D_TTL, lambda: bag3d.roof_for_point(_bag3d_pages(url), lat, lon, BAG3D_RADIUS_M))
+        except UpstreamError as error:
+            self._send_json({"error": error.message}, error.status)
+            return
+        except ValueError:
+            self._send_json({"error": "3D BAG answered something that is not JSON"}, 502)
+            return
+        self._send_json(dict(result, covered=True, radius_m=BAG3D_RADIUS_M), 200)
 
     def _spamdetector_alerts(self):
         try:

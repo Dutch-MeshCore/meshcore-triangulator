@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-antenna-height-from-the-roof",
+    "date": "2026-09-07",
+    "title": "A repeater on a roof gets its real antenna height",
+    "body": "The line-of-sight check assumed every observer's antenna at 12 m. When a cluster is locked the tool now looks up, in 3D BAG, the tallest building within 50 m of each observer; those get its roof plus a 3 m mast, the others keep 12 m. The cluster status says how many, and an observer's popup shows its antenna height and how far that roof is. Netherlands only, like the terrain check."
+  },
+  {
     "id": "2026-09-07-fresh-visit",
     "date": "2026-09-07",
     "title": "Fresh visits start in the right place",
