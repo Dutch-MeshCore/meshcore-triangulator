@@ -58,6 +58,7 @@ control in front if you do; the proxy has no auth of its own.
 | map.meshcore.io | Global node feed (fallback). |
 | PDOK AHN | Terrain/surface elevation (NL). |
 | mc-spamdetector.nl | Incident list, and an incident's entry hops as Step 1 clues. |
+| 3D BAG (api.3dbag.nl) | The building an observer stands on, for its antenna height in the line-of-sight check (NL). |
 
 Loaded by the page directly, not through the proxy: OpenFreeMap vector tiles (the Liberty basemap, no key) and AWS Terrain Tiles (relief in the 3D view, for looking at; line of sight is measured on AHN).
 

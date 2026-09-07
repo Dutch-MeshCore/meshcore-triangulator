@@ -1737,8 +1737,45 @@
     const panelCluster = document.getElementById("panel-cluster");
     const panelTerrain = document.getElementById("panel-terrain");
 
+    // Assumed when the node stands on no known building. Half of the fixture's
+    // observers stand on one (32 of 60 sampled against 3D BAG), with a roof
+    // median 10.2 m above ground, p90 25 m; for those the roof plus a mast
+    // replaces this constant (#74).
     const REPEATER_ANTENNA_HEIGHT_M = 12;
+    const ROOFTOP_MAST_M = 3;
     const TARGET_ANTENNA_HEIGHT_M = 1.5;
+
+    // Antenna height above the ground for an observer: its roof plus a mast
+    // when 3D BAG put it on a building, the flat constant otherwise.
+    function observerAntennaHeightM(node) {
+      return Number.isFinite(node.roofHeightM) ? node.roofHeightM + ROOFTOP_MAST_M : REPEATER_ANTENNA_HEIGHT_M;
+    }
+
+    // One 3D BAG lookup per node, through server.py, which caches by
+    // position. Sets node.roofHeightM (metres above ground) when the node
+    // stands inside a building footprint; leaves it unset otherwise or when
+    // the lookup fails. Counts are returned for the status line.
+    async function fetchRoofHeights(nodes) {
+      let onRoof = 0;
+      let answered = 0;
+      await Promise.all(nodes.map(async (node) => {
+        if (!Number.isFinite(node.lat) || !Number.isFinite(node.lon)) return;
+        try {
+          const response = await fetch(`/proxy/3dbag/roof?lat=${node.lat.toFixed(5)}&lon=${node.lon.toFixed(5)}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          answered += 1;
+          if (Number.isFinite(data.roof_m) && data.roof_m > 0) {
+            node.roofHeightM = data.roof_m;
+            node.roofBuilding = data.building;
+            onRoof += 1;
+          }
+        } catch (error) {
+          // A failed lookup leaves the constant in place; the status line says how many answered.
+        }
+      }));
+      return { onRoof, answered, asked: nodes.length };
+    }
     // Swept against the accuracy fixture (#53, #69): 2 km to 20 km moves median
     // error 1.9 -> 2.0 km and p90 9.0 -> 9.1 km. This constant is inert. Error
     // is set by observer geometry, not by assumed coverage size.
@@ -2905,6 +2942,9 @@
         if (moved) {
           node.moved = true;
           delete node.provenRadiusKm;
+          // The roof belonged to the position it left.
+          delete node.roofHeightM;
+          delete node.roofBuilding;
         } else {
           delete node.moved;
         }
@@ -3361,7 +3401,7 @@
         fetchAhnSurfaceElevation(to.lat, to.lon),
         Promise.all(interior.map((point) => fetchAhnLayerValue(point.lat, point.lon, "dsm_05m", surfaceCache)))
       ]);
-      const startHeight = fromGround + REPEATER_ANTENNA_HEIGHT_M;
+      const startHeight = fromGround + observerAntennaHeightM(from);
       const endHeight = targetGround + TARGET_ANTENNA_HEIGHT_M;
       const pathM = distanceKm * 1000;
       let worstLossDb = 0;
@@ -4193,6 +4233,13 @@
       if (runId !== discoveryRunId) {
         return;
       }
+      // Roof heights for the same nodes the link budget covers (#74). The
+      // cluster copies are what the pools are built from below, so the value
+      // travels with the node from here on.
+      const roofs = await fetchRoofHeights(fetchTargets);
+      if (runId !== discoveryRunId) {
+        return;
+      }
       const supportNodes = Array.from(supportNodeMap.values()).slice(0, 40);
       const observerPoolMap = new Map();
       clusterNodes.forEach((node) => {
@@ -4285,7 +4332,11 @@
         radiusNotes.push(`${observersWithoutReceiveQuorum} observer${observersWithoutReceiveQuorum === 1 ? "" : "s"} had under ${RECEIVE_QUORUM} inbound links, so used all directions`);
       }
       const implausibleNote = radiusNotes.length ? ` Coverage radii: ${radiusNotes.join("; ")}.` : "";
-      clusterStatus.textContent = `Cluster near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}: ${uniquePrefixCount(dedupedNodes)} observers active.${hullNote}${dedupNote}${linkCapNote}${implausibleNote}`;
+      // Which observers got a roof height, and which stay on the constant.
+      const roofNote = roofs.answered
+        ? ` Antenna heights: ${roofs.onRoof} of ${roofs.answered} observers stand on a building per 3D BAG, the rest assume ${REPEATER_ANTENNA_HEIGHT_M} m.`
+        : ` Antenna heights: 3D BAG did not answer, all observers assume ${REPEATER_ANTENNA_HEIGHT_M} m.`;
+      clusterStatus.textContent = `Cluster near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}: ${uniquePrefixCount(dedupedNodes)} observers active.${hullNote}${dedupNote}${linkCapNote}${implausibleNote}${roofNote}`;
       syncClusterEditorFromLockedRegion();
       setDiscoveryCollapsed(true);
       renderCandidateMap([]);
@@ -4677,6 +4728,8 @@
               lat: n.lat, lon: n.lon,
               weight: Number.isFinite(n.weight) ? n.weight : 1,
               provenRadiusKm: Number.isFinite(n.provenRadiusKm) ? n.provenRadiusKm : null,
+              antennaM: observerAntennaHeightM(n),
+              onRoof: Number.isFinite(n.roofHeightM) ? 1 : 0,
               moved: n.moved ? 1 : 0,
               movedKm: n.moved && positionOverrides.get(nodeId(n))
                 ? haversineKm(positionOverrides.get(nodeId(n)).upstream, n) : null
@@ -5285,10 +5338,14 @@
           ? "" : `<br>Proven-link radius: ${Number(p.provenRadiusKm).toFixed(1)} km`;
         const moved = p.moved === 1 || p.moved === "1";
         const movedLine = moved ? `<br>Moved ${Number(p.movedKm).toFixed(1)} km from its advertised position; range from link count.` : "";
+        const onRoof = p.onRoof === 1 || p.onRoof === "1";
+        const antennaLine = Number.isFinite(Number(p.antennaM))
+          ? `<br>Antenna ${Number(p.antennaM).toFixed(0)} m${onRoof ? " (roof per 3D BAG + mast)" : " (assumed)"}`
+          : "";
         const popup = show3dPopup(e.lngLat, `
           <div>
             <p class="popup-title">${p.title}</p>
-            <p class="popup-copy">Short ID: ${p.shortId}<br>Lat/Lon: ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>Weight: ${String(Number(p.weight).toFixed(2)).replace(/\.00$/, "")}${radius}${movedLine}</p>
+            <p class="popup-copy">Short ID: ${p.shortId}<br>Lat/Lon: ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>Weight: ${String(Number(p.weight).toFixed(2)).replace(/\.00$/, "")}${radius}${antennaLine}${movedLine}</p>
             ${moved ? `<button type="button" class="link-remove-btn" data-putback="${p.nodeKey}">Put it back</button>` : ""}
           </div>
         `);

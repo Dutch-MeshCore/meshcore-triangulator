@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.source="https://github.com/khagele/meshcore-trian
       org.opencontainers.image.description="MeshCore triangulator (web-standalone): static UI + stdlib proxy to mc-radar/meshcore/PDOK"
 
 WORKDIR /app
-COPY server.py spamdetector.py index.html changelog.json ./
+COPY server.py spamdetector.py bag3d.py index.html changelog.json ./
 
 # Inside the container we must bind all interfaces; restrict exposure when
 # publishing the port instead (e.g. -p 127.0.0.1:8000:8000).
