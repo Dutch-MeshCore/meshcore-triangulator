@@ -50,11 +50,46 @@ def test_point_inside_and_outside_the_footprint():
     inside = bag3d.roof_for_point(FIXTURE, lat, lon)
     assert inside["building"] == building["id"]
     assert inside["roof_m"] == 35.5
+    assert inside["distance_m"] == 0.0
     assert inside["buildings"] == 1
     lat2, lon2 = bag3d.rd_to_wgs84(cx + 500, cy)
     outside = bag3d.roof_for_point(FIXTURE, lat2, lon2)
-    assert outside["building"] is None and outside["roof_m"] is None
+    assert outside["building"] is None and outside["roof_m"] is None and outside["distance_m"] is None
+
+
+def test_the_tallest_building_within_the_radius_counts_with_its_distance():
+    building = bag3d.buildings(FIXTURE)[0]
+    ring = building["surfaces"][0][0]
+    east = max(p[0] for p in ring)
+    cy = sum(p[1] for p in ring) / len(ring)
+    # 40 m east of the footprint's eastern edge: inside a 100 m radius, outside a 10 m one.
+    x, y = east + 40, cy
+    d = bag3d.footprint_distance(x, y, building["surfaces"])
+    assert 35 < d <= 40.5
+    lat, lon = bag3d.rd_to_wgs84(x, y)
+    near = bag3d.roof_for_point(FIXTURE, lat, lon, radius_m=100)
+    assert near["building"] == building["id"] and near["roof_m"] == 35.5
+    assert 35 < near["distance_m"] <= 40.5
+    far = bag3d.roof_for_point(FIXTURE, lat, lon, radius_m=10)
+    assert far["building"] is None
+
+
+def test_pages_are_searched_together_and_the_taller_one_wins():
+    page2 = json.loads(json.dumps(FIXTURE))
+    obj = page2["features"][0]["CityObjects"]
+    key = next(iter(obj))
+    obj[key]["attributes"]["b3_h_dak_max"] = 60.0
+    obj["NL.IMBAG.Pand.taller"] = obj.pop(key)
+    building = bag3d.buildings(FIXTURE)[0]
+    ring = building["surfaces"][0][0]
+    cx = sum(p[0] for p in ring) / len(ring)
+    cy = sum(p[1] for p in ring) / len(ring)
+    lat, lon = bag3d.rd_to_wgs84(cx, cy)
+    result = bag3d.roof_for_point([FIXTURE, page2], lat, lon)
+    assert result["building"] == "NL.IMBAG.Pand.taller"
+    assert result["roof_m"] == round(60.0 - 1.1339999437332153, 1)
+    assert result["buildings"] == 2
 
 
 def test_empty_response_means_no_building():
-    assert bag3d.roof_for_point({"features": []}, 52.0, 5.0) == {"roof_m": None, "building": None, "buildings": 0}
+    assert bag3d.roof_for_point({"features": []}, 52.0, 5.0) == {"roof_m": None, "building": None, "distance_m": None, "buildings": 0}

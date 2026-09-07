@@ -3,8 +3,11 @@
 A repeater on a roof has its antenna at roof height plus a mast, not at the
 12 m the estimator assumed for every node. 3D BAG (TU Delft, CC BY 4.0)
 publishes per-building footprints with roof and ground heights. This module
-turns one response of its OGC API Features endpoint into "the building this
-point stands on, and how high its roof is above the ground".
+turns the responses of its OGC API Features endpoint into "the tallest
+building within reach of this point, how high its roof is above the ground,
+and how far away it is". Advertised positions are metres off and a mast can
+stand next to the building it serves, so the tallest building within
+50 m is the antenna's structure rather than the footprint under the point.
 
 Pure logic, stdlib only, so it is unit-testable (tests/test_bag3d.py).
 server.py fetches the payload and serves the result under /proxy/3dbag/.
@@ -131,12 +134,63 @@ def building_at(payload, lat, lon):
     return None
 
 
-def roof_for_point(payload, lat, lon):
-    """What the page asks for: the roof height above ground of the building
-    the point stands on, or null when it stands on none."""
-    building = building_at(payload, lat, lon)
+def _segment_distance(px, py, ax, ay, bx, by):
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return math.hypot(px - ax, py - ay)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
+def footprint_distance(x, y, surfaces):
+    """Metres from the point to the nearest footprint edge, 0 inside."""
+    best = None
+    for rings in surfaces:
+        if point_in_surface(x, y, rings):
+            return 0.0
+        outer = rings[0] if rings else []
+        n = len(outer)
+        for i in range(n):
+            ax, ay = outer[i]
+            bx, by = outer[(i + 1) % n]
+            d = _segment_distance(x, y, ax, ay, bx, by)
+            if best is None or d < best:
+                best = d
+    return best
+
+
+def tallest_near(payloads, lat, lon, radius_m):
+    """The tallest building whose footprint comes within radius_m of the
+    point, over one or more response pages. Ties go to the nearer one."""
+    if isinstance(payloads, dict):
+        payloads = [payloads]
+    x, y = wgs84_to_rd(lat, lon)
+    best = None
+    total = 0
+    for payload in payloads:
+        for building in buildings(payload):
+            total += 1
+            if building["roof_m"] is None or not building["surfaces"]:
+                continue
+            distance = footprint_distance(x, y, building["surfaces"])
+            if distance is None or distance > radius_m:
+                continue
+            key = (round(building["roof_m"], 1), -distance)
+            if best is None or key > best[0]:
+                best = (key, building, distance)
+    return best, total
+
+
+def roof_for_point(payloads, lat, lon, radius_m=50.0):
+    """What the page asks for: the roof height above ground of the tallest
+    building within radius_m, how far its footprint is, or nulls."""
+    best, total = tallest_near(payloads, lat, lon, radius_m)
+    if not best:
+        return {"roof_m": None, "building": None, "distance_m": None, "buildings": total}
+    _, building, distance = best
     return {
-        "roof_m": round(building["roof_m"], 1) if building and building["roof_m"] is not None else None,
-        "building": building["id"] if building else None,
-        "buildings": len(buildings(payload)),
+        "roof_m": round(building["roof_m"], 1),
+        "building": building["id"],
+        "distance_m": round(distance, 1),
+        "buildings": total,
     }

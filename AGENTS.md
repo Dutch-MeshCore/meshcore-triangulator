@@ -30,7 +30,7 @@ web-standalone/         Self-contained map tool (no DB)
   changelog.json        "What's new" entries, newest first; every user-visible change adds one
   server.py             stdlib-only HTTP server + proxy for upstream feeds (mc-radar, meshcore.io, PDOK, mc-spamdetector.nl)
   spamdetector.py       parses a spam-detector attack page into Step 1 clues (pure logic, tested)
-  bag3d.py              3D BAG: RD conversion, footprints, the roof a node stands on (pure logic, tested)
+  bag3d.py              3D BAG: RD conversion, footprints, the tallest roof within reach of a node (pure logic, tested)
   tests/                pytest for the pure logic; fixtures are trimmed copies of real upstream pages
   tools/                accuracy.mjs (estimator error against known targets), its fixture, build-fixture.py
   Dockerfile            Alpine, non-root, stdlib-only
