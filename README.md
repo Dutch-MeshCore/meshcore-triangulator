@@ -74,6 +74,15 @@ result instead of a blank form.
 | `hop2` | no | Overrides the "2nd-hop km" input (assumed RF reach for 2nd-hop/relayed clues). |
 | `cluster` | no | Overrides the "Cluster km" input (search radius / hull buffer). |
 | `incident` | no | A [mc-spamdetector.nl](https://mc-spamdetector.nl/) attack number, e.g. `2047`. Loads its entry hops as the first-hop clues and runs discovery. Used on its own, without `prefixes`. |
+| `region` | no | `lat,lon` of a candidate region's centre. After discovery the nearest candidate (within 15 km) is chosen and its proven links pulled. The Share button emits it once a region is locked. |
+| `obs` | no | Active observers with weights after edits, `KEY8:weight,…` (first 8 hex of the node key). Applied after the lock; nodes no longer in the cluster are named in the status. |
+| `moved` | no | Dragged observers, `KEY8@lat,lon;…`. |
+| `droplink` | no | Removed proven links, `KEY8-KEY8;…`. |
+| `est` | no | `observer` or `terrain`: which estimate to run after the lock. |
+| `layers` | no | Layer switch, e.g. `layers=heat`; `none` for all off. |
+| `relief` | no | Relief exaggeration for the 3D view. |
+
+The Share button emits all of these, each only when it differs from what the app does on its own, and the address bar follows the state so copying it gives the same link.
 
 If `prefixes` is present, the page pre-fills Step 1 from these params and
 automatically clicks "Find Best Matching Region" on load — no further

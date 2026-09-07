@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-the-link-carries-the-scene",
+    "date": "2026-09-07",
+    "title": "A shared link now carries the whole scene",
+    "body": "Share used to send only Step 1; whoever opened the link landed on the candidate list and started over. It now also carries the region you chose, the observers you ticked off or reweighted, a repeater you dragged, a proven link you removed, which estimate you ran, the layer switch and the relief slider, each only when you changed it. Opening the link replays all of that and says what no longer applies. The address bar follows along, so copying it gives the same link as the button."
+  },
+  {
     "id": "2026-09-07-waiting-for-proven-links",
     "date": "2026-09-07",
     "title": "Choosing a region shows what it is waiting for",
