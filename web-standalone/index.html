@@ -350,6 +350,33 @@
     /* Spam-detector import (#107): the incident list on its own line, the
        free field and its button on the next. The side panel is ~320 px, so
        three controls on one row left the list unreadable. */
+    /* Spam-detector import folded under one line (#117): the first-hop
+       field is what a first visit needs, the import is the shortcut. */
+    .import-details {
+      margin-bottom: 12px;
+    }
+    .import-details summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.84rem;
+      padding: 8px 0;
+      list-style: none;
+    }
+    .import-details summary::-webkit-details-marker {
+      display: none;
+    }
+    .import-details summary::before {
+      content: "▸";
+      display: inline-block;
+      width: 1em;
+      transition: transform 0.15s ease;
+    }
+    .import-details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .import-details[open] summary {
+      margin-bottom: 8px;
+    }
     .step-panel select.import-select {
       width: 100%;
       border-radius: 12px;
@@ -1261,6 +1288,15 @@
       .topbar-nav {
         gap: 10px;
       }
+      /* Two rows on a phone: brand with GitHub, then the nav. The button on
+         a row of its own was a third row of the top bar (#117). */
+      .topbar-nav {
+        order: 3;
+        flex-basis: 100%;
+      }
+      .topbar-github {
+        order: 2;
+      }
       /* On a narrow screen the What's new panel is a sheet at the bottom of
          the viewport instead of a dropdown under the bell, whose position
          depends on how the button row wrapped (#112). */
@@ -1272,6 +1308,32 @@
         left: 12px;
         width: auto;
         max-height: 60vh;
+      }
+    }
+    /* Touch targets (#117): 40 px for the icon buttons and the map's own
+       controls, a thumb you can hit for the relief slider. Coarse pointer
+       only, so the desktop layout keeps its density. */
+    @media (pointer: coarse) {
+      .controls-card button.is-icon {
+        width: 40px;
+        height: 40px;
+      }
+      /* MapLibre's own sheet loads after this one, so the selector needs
+         the extra ancestor to win. */
+      .map-wrap .maplibregl-ctrl-group button {
+        width: 36px;
+        height: 36px;
+      }
+      .terrain-control input[type="range"] {
+        height: 28px;
+      }
+      .terrain-control input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+      }
+      .terrain-control input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
       }
     }
   </style>
@@ -1366,15 +1428,17 @@
           <span class="step-kicker">Step 1</span>
           <h3>Clues + Regions</h3>
           <div class="step-body">
-            <label for="incident-select">Load a spam-detector incident (optional)</label>
-            <select id="incident-select" class="import-select" aria-label="Recent incidents on mc-spamdetector.nl">
-              <option value="">Recent incidents…</option>
-            </select>
-            <div class="import-row">
-              <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
-              <button id="incident-load-button" type="button" class="button-secondary">Load</button>
-            </div>
-            <p id="incident-status" class="hint">Fills the first-hop prefixes with the incident's entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>, weighted by packets, then finds the region.</p>
+            <details id="import-details" class="import-details">
+              <summary>Load a spam-detector incident instead</summary>
+              <select id="incident-select" class="import-select" aria-label="Recent incidents on mc-spamdetector.nl">
+                <option value="">Recent incidents…</option>
+              </select>
+              <div class="import-row">
+                <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
+                <button id="incident-load-button" type="button" class="button-secondary">Load</button>
+              </div>
+              <p id="incident-status" class="hint">Entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a> become the first-hop prefixes, weighted by packets; then it finds the region.</p>
+            </details>
             <label for="prefix-input">First-hop prefixes — heard the source directly</label>
             <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
             <p id="prefix-status" class="hint">`PREFIX` or `PREFIX:count` — 2/4/6 hex, comma-separated. Count = times heard (weight).</p>
@@ -1824,6 +1888,21 @@
         lat: total.lat / total.weight,
         lon: total.lon / total.weight
       };
+    }
+
+    // On a phone the panels stack above the map, so what just changed is
+    // usually below the fold: the candidate list after discovery, the map
+    // after a region is chosen, the status line and map after an estimate
+    // (#117). Desktop keeps the map beside the panels and needs none of this.
+    const NARROW_SCREEN = "(max-width: 860px)";
+    function narrowScreen() {
+      return window.matchMedia && window.matchMedia(NARROW_SCREEN).matches;
+    }
+    function revealOnNarrow(element) {
+      if (!element || !narrowScreen()) return;
+      // Instant, not smooth: a smooth scroll is dropped when another one is
+      // still running, and these fire right after a state change.
+      element.scrollIntoView({ block: "start" });
     }
 
     function fitMapToNodes(nodesList) {
@@ -3422,6 +3501,9 @@
             : ` Terrain re-scored the 36 best cells; that area holds no more.`;
         }
         renderLikelihoodSurface(top, grid, stats);
+        // The status line sits just above the map; showing it from its top
+        // keeps the "likely within" sentence and most of the map on screen.
+        revealOnNarrow(terrainStatus);
         const best = top[0];
         if (useTerrain) {
           terrainStatus.textContent = best
@@ -3978,6 +4060,7 @@
       updateClueZone(dedupedNodes);
       // Zoom to the de-duplicated observers only (no far duplicates / support).
       fitMapToNodes(dedupedNodes);
+      revealOnNarrow(mapWrap);
       discoverStatus.textContent = (dupRemoved.length || hullExcluded.length)
         ? `Cluster selected near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}.${hullNote}${dedupNote} Review the observers below, then lock with “Apply Inside Locked Cluster” and continue to Step 3.`
         : `Cluster locked near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)} with ${uniquePrefixCount(dedupedNodes)} observers. Step 3 is ready.`;
@@ -4119,6 +4202,7 @@
         lastDiscoveredCandidateRegions = components.slice();
         selectedCandidateRegionId = null;
         renderCandidateList();
+        revealOnNarrow(document.getElementById("panel-cluster"));
         clearClueZone();
         clearEstimateSurface();
         currentMatchedNodes = [];
@@ -5149,12 +5233,30 @@
         style: "https://tiles.openfreemap.org/styles/liberty",
         center: [center.lon, center.lat],
         zoom: currentMatchedNodes.length ? 13 : 6.4, pitch: 0, bearing: 0,
+        // The map sits inside a scrolling page. Without this a swipe or a
+        // wheel over it pans or zooms the map and the page cannot be
+        // scrolled past it on a phone (#117). Two fingers pan, ctrl+wheel
+        // zooms, and MapLibre shows the hint itself.
+        cooperativeGestures: true,
+        // Expanded attribution covered a third of a 412 px map.
+        attributionControl: { compact: narrowScreen() },
         // MapLibre caps pitch at 60 by default. 85 is the library ceiling and
         // the angle worth having now that there is real terrain to look along:
         // a near-horizon view is how you see what a ridge actually blocks.
         maxPitch: 85
       });
       map3d.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
+      // Compact attribution opens expanded until the first interaction, which
+      // on a phone is the box over the map that compact was meant to avoid.
+      // Start it folded; the "i" button opens it.
+      map3d.once("load", () => {
+        const attrib = map3d.getContainer().querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show");
+        if (attrib) {
+          attrib.classList.remove("maplibregl-compact-show");
+          const toggle = attrib.querySelector(".maplibregl-ctrl-attrib-button");
+          if (toggle) toggle.setAttribute("aria-expanded", "false");
+        }
+      });
       // A DEM tile 404/timeout arrives as a source error, not a throw, so it
       // has to be caught here or the view silently keeps a half-loaded relief.
       map3d.on("error", (e) => {
@@ -5240,6 +5342,8 @@
         return;
       }
       if (incidentStatus) incidentStatus.textContent = `Loading incident #${id} from the spam detector...`;
+      const importDetails = document.getElementById("import-details");
+      if (importDetails) importDetails.open = true;
       if (incidentLoadButton) incidentLoadButton.disabled = true;
       try {
         const response = await fetch(`/proxy/spamdetector/incident/${id}`);

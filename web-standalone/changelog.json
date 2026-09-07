@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-easier-on-a-phone",
+    "date": "2026-09-07",
+    "title": "Easier on a phone",
+    "body": "The map no longer traps the page: one finger scrolls past it, two fingers pan it, and on a desktop the wheel zooms it with ctrl held, with a hint from the map. After you find regions, choose one or run an estimate, the page scrolls to what changed. The attribution box no longer covers a third of a small map, the top bar takes two rows instead of three, the icon buttons and the relief slider are bigger to tap, and the spam-detector import is folded under one line so the first-hop field comes first."
+  },
+  {
     "id": "2026-09-07-drag-an-observer",
     "date": "2026-09-07",
     "title": "Drag an observer to where it really is",
