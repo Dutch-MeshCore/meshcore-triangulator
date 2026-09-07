@@ -1451,6 +1451,7 @@
         <div id="manual-banner" class="manual-banner" role="status" hidden>
           <span id="manual-banner-text">Resolve on map</span>
           <button id="manual-reset-button" type="button" hidden>Reset picks</button>
+          <button id="manual-positions-button" type="button" hidden>Reset positions</button>
         </div>
       </section>
     </div>
@@ -1487,6 +1488,7 @@
     const manualBanner = document.getElementById("manual-banner");
     const manualBannerText = document.getElementById("manual-banner-text");
     const manualResetButton = document.getElementById("manual-reset-button");
+    const manualPositionsButton = document.getElementById("manual-positions-button");
     const mapWrap = document.getElementById("map-wrap");
     const clusterEditorStatus = document.getElementById("cluster-editor-status");
     const changeClusterButton = document.getElementById("change-cluster-button");
@@ -2263,6 +2265,12 @@
     function recomputeProvenRadii() {
       currentMatchedNodes.forEach((node) => {
         const id = nodeId(node);
+        // A moved node has no usable link distances (#33b); it stays on the
+        // link_count tier until it is put back.
+        if (node.moved) {
+          delete node.provenRadiusKm;
+          return;
+        }
         const entries = [];
         currentProvenLinks.forEach((link) => {
           // Both flags are evaluated for THIS node's receive direction: a
@@ -2282,6 +2290,12 @@
         // evidence. Editing links away used to keep the stale value.
         if (Number.isFinite(radiusKm)) node.provenRadiusKm = radiusKm;
         else delete node.provenRadiusKm;
+        // The pool copies are what reweightLockedCluster() reads on apply.
+        nodeObjectsFor(id).forEach((copy) => {
+          if (copy === node) return;
+          if (Number.isFinite(radiusKm)) copy.provenRadiusKm = radiusKm;
+          else delete copy.provenRadiusKm;
+        });
       });
     }
 
@@ -2526,6 +2540,7 @@
       hasObserverEstimate = false;
       currentProvenLinks = [];
       lockedObserverPool = [];
+      positionOverrides.clear();
       clearEstimateSurface();
       clearClueZone();
       refresh3dData();
@@ -2544,6 +2559,94 @@
       restoreCandidateChoice();
       discoverStatus.textContent = `Switching to region ${region.rank} and pulling proven links...`;
       activateCandidateRegion(region);
+    }
+
+    // ── Drag to reposition (#33b) ───────────────────────────────────────────
+    // Upstream positions are advertised, and at times stale or wrong. In
+    // manual mode an observer can be dragged to where it actually is. The
+    // advertised position stays on the map as a ghost, and the node's
+    // proven-link radius is dropped: those link distances were measured from
+    // the position it no longer has, so it falls to the link_count tier of
+    // anchorRangeKm(), which the status line says. Session only, no
+    // localStorage: a stale override quietly reshaping a fresh search is the
+    // failure to avoid, and the share URL is the deliberate way to pass a
+    // layout on (#34).
+    const positionOverrides = new Map(); // nodeId -> { lat, lon, upstream: { lat, lon } }
+    let dragState = null;
+
+    // Every object that carries this node's position: the active list, the
+    // anchors, both pools and the ends of its proven links. reweightLockedCluster()
+    // copies from the pool, so the pool has to move too or an apply would
+    // put the node back.
+    function nodeObjectsFor(id) {
+      const found = [];
+      [currentMatchedNodes, currentRfAnchors, lockedObserverPool, (currentResolvedContext && currentResolvedContext.matches) || []]
+        .forEach((list) => list.forEach((node) => { if (nodeId(node) === id) found.push(node); }));
+      currentProvenLinks.forEach((link) => {
+        if (link.from && nodeId(link.from) === id) found.push(link.from);
+        if (link.to && nodeId(link.to) === id) found.push(link.to);
+      });
+      return found;
+    }
+
+    function placeNode(id, lat, lon, moved) {
+      nodeObjectsFor(id).forEach((node) => {
+        node.lat = lat;
+        node.lon = lon;
+        if (moved) {
+          node.moved = true;
+          delete node.provenRadiusKm;
+        } else {
+          delete node.moved;
+        }
+      });
+    }
+
+    function nodeLabel(node) {
+      return `${obsPrefix(node) || ""} · ${node.adv_name || node.name || "observer"}`;
+    }
+
+    function moveObserver(id, lat, lon, upstream) {
+      const node = nodeObjectsFor(id)[0];
+      if (!node) return;
+      positionOverrides.set(id, { lat, lon, upstream });
+      placeNode(id, lat, lon, true);
+      const km = haversineKm(upstream, { lat, lon });
+      afterPositionChange(`${nodeLabel(node)} moved ${km.toFixed(1)} km from its advertised position. Its proven-link range no longer applies; its assumed range now comes from its link count. Re-run the estimate.`);
+    }
+
+    function restoreObserver(id) {
+      const override = positionOverrides.get(id);
+      if (!override) return;
+      positionOverrides.delete(id);
+      placeNode(id, override.upstream.lat, override.upstream.lon, false);
+      recomputeProvenRadii();
+      const node = nodeObjectsFor(id)[0];
+      afterPositionChange(`${node ? nodeLabel(node) : id} back at its advertised position, proven-link range restored. Re-run the estimate.`);
+    }
+
+    function restoreAllPositions() {
+      const ids = [...positionOverrides.keys()];
+      if (!ids.length) return;
+      ids.forEach((id) => {
+        const override = positionOverrides.get(id);
+        placeNode(id, override.upstream.lat, override.upstream.lon, false);
+      });
+      positionOverrides.clear();
+      recomputeProvenRadii();
+      afterPositionChange(`${ids.length} observer${ids.length === 1 ? "" : "s"} back at ${ids.length === 1 ? "its" : "their"} advertised position${ids.length === 1 ? "" : "s"}, proven-link ranges restored. Re-run the estimate.`);
+    }
+
+    // A position change invalidates the estimate but not the editor's
+    // unsaved picks, so the editor is left alone; its coordinate text catches
+    // up on the next apply.
+    function afterPositionChange(message) {
+      hasObserverEstimate = false;
+      clearEstimateSurface();
+      currentRfAnchors = deriveAnchors(currentMatchedNodes);
+      terrainStatus.textContent = message;
+      renderManualLayer();
+      syncControlStates();
     }
 
     // Flip the editor's checkboxes so `node` represents `prefix` and the
@@ -2598,12 +2701,16 @@
       const changed = changedPickGroups(groups).length;
       const rivals = lastDiscoveredCandidateRegions.length > 1 ? lastDiscoveredCandidateRegions.length - 1 : 0;
       const rivalNote = rivals ? ` ${rivals} other region${rivals === 1 ? "" : "s"} outlined; click one to switch.` : "";
+      const moved = positionOverrides.size;
       manualBannerText.textContent = (groups.length
         ? `${groups.length} ambiguous prefix${groups.length === 1 ? "" : "es"}, ${others} other candidate${others === 1 ? "" : "s"} shown. Click one to use it.`
         : "No prefix in this cluster has more than one candidate.")
         + (changed ? ` ${changed} changed from the automatic pick.` : "")
-        + rivalNote;
+        + rivalNote
+        + " Drag an observer to move it."
+        + (moved ? ` ${moved} moved.` : "");
       if (manualResetButton) manualResetButton.hidden = !changed;
+      if (manualPositionsButton) manualPositionsButton.hidden = !moved;
     }
 
     function setManualMode(on) {
@@ -3664,6 +3771,7 @@
       hasObserverEstimate = false;
       currentProvenLinks = [];
       lockedObserverPool = [];
+      positionOverrides.clear();
       // After the state is emptied, not before. The MapLibre sources are
       // rebuilt FROM this state, so a refresh above would repaint the very
       // nodes being cleared. Under Leaflet the layers were cleared directly
@@ -4176,6 +4284,7 @@
     observerEditor.addEventListener("change", () => renderManualLayer());
 
     if (manualResetButton) manualResetButton.addEventListener("click", resetDuplicatePicks);
+    if (manualPositionsButton) manualPositionsButton.addEventListener("click", restoreAllPositions);
     if (manualModeButton) {
       manualModeButton.addEventListener("click", () => setManualMode(!manualMode));
     }
@@ -4243,12 +4352,42 @@
               name: `${n.shortId || ""} ${n.adv_name || n.name || ""}`.trim(),
               title: n.adv_name || n.name || "Resolved node",
               shortId: n.shortId || "",
+              nodeKey: nodeId(n),
               lat: n.lat, lon: n.lon,
               weight: Number.isFinite(n.weight) ? n.weight : 1,
-              provenRadiusKm: Number.isFinite(n.provenRadiusKm) ? n.provenRadiusKm : null
+              provenRadiusKm: Number.isFinite(n.provenRadiusKm) ? n.provenRadiusKm : null,
+              moved: n.moved ? 1 : 0,
+              movedKm: n.moved && positionOverrides.get(nodeId(n))
+                ? haversineKm(positionOverrides.get(nodeId(n)).upstream, n) : null
             }
           }))
       };
+    }
+
+    // Advertised positions of moved observers (#33b): a hollow marker where
+    // upstream says the node is, and a dashed line to where it was dragged.
+    function ghostFeatures3d() {
+      const features = [];
+      positionOverrides.forEach((override, id) => {
+        const node = nodeObjectsFor(id)[0];
+        const km = haversineKm(override.upstream, override);
+        features.push({
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [[override.upstream.lon, override.upstream.lat], [override.lon, override.lat]] },
+          properties: { nodeKey: id }
+        });
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [override.upstream.lon, override.upstream.lat] },
+          properties: {
+            nodeKey: id,
+            title: node ? nodeLabel(node) : id,
+            movedKm: km,
+            lat: override.upstream.lat, lon: override.upstream.lon
+          }
+        });
+      });
+      return { type: "FeatureCollection", features };
     }
 
     // Estimate points for 3D, tagging the strongest candidate (index 0) so the 3D
@@ -4463,6 +4602,7 @@
         "t3d-links": linkFeatures3d,
         "t3d-manual": manualFeatures3d,
         "t3d-obs": () => fc3dPoints(currentMatchedNodes),
+        "t3d-ghost": ghostFeatures3d,
         "t3d-est": estFeatures3d
       };
       Object.entries(sources).forEach(([id, fn]) => {
@@ -4725,6 +4865,17 @@
       m.addSource("t3d-obs", { type: "geojson", data: fc3dPoints(currentMatchedNodes) });
       m.addLayer({ id: "t3d-obs-circle", type: "circle", source: "t3d-obs", paint: { "circle-radius": 6, "circle-color": "#9be564", "circle-stroke-color": "#0a1b24", "circle-stroke-width": 2 } });
       m.addLayer({ id: "t3d-obs-label", type: "symbol", source: "t3d-obs", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-allow-overlap": false }, paint: { "text-color": "#eaf6ff", "text-halo-color": "#0a1b24", "text-halo-width": 1.4 } });
+      m.addSource("t3d-ghost", { type: "geojson", data: ghostFeatures3d() });
+      m.addLayer({
+        id: "t3d-ghost-line", type: "line", source: "t3d-ghost",
+        filter: ["==", ["geometry-type"], "LineString"],
+        paint: { "line-color": "#9be564", "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [2, 2] }
+      });
+      m.addLayer({
+        id: "t3d-ghost-circle", type: "circle", source: "t3d-ghost",
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: { "circle-radius": 6, "circle-color": "#0a1b24", "circle-opacity": 0.35, "circle-stroke-color": "#9be564", "circle-stroke-width": 2 }
+      });
       m.addSource("t3d-clue-centre", { type: "geojson", data: clueCentreFeature3d() });
       m.addLayer({
         id: "t3d-clue-centre-circle", type: "circle", source: "t3d-clue-centre",
@@ -4803,18 +4954,87 @@
       });
 
       m.on("click", "t3d-obs-circle", (e) => {
+        if (dragState || (e.originalEvent && e.originalEvent.__dragged)) return;
         const p = e.features[0].properties;
-        const radius = p.provenRadiusKm === null || p.provenRadiusKm === "null"
+        // A null property does not survive the trip through the GeoJSON
+        // source, so it arrives undefined here; a node without a radius used
+        // to print "NaN km".
+        const radius = !Number.isFinite(Number(p.provenRadiusKm)) || p.provenRadiusKm === null || p.provenRadiusKm === "null"
           ? "" : `<br>Proven-link radius: ${Number(p.provenRadiusKm).toFixed(1)} km`;
-        show3dPopup(e.lngLat, `
+        const moved = p.moved === 1 || p.moved === "1";
+        const movedLine = moved ? `<br>Moved ${Number(p.movedKm).toFixed(1)} km from its advertised position; range from link count.` : "";
+        const popup = show3dPopup(e.lngLat, `
           <div>
             <p class="popup-title">${p.title}</p>
-            <p class="popup-copy">Short ID: ${p.shortId}<br>Lat/Lon: ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>Weight: ${String(Number(p.weight).toFixed(2)).replace(/\.00$/, "")}${radius}</p>
+            <p class="popup-copy">Short ID: ${p.shortId}<br>Lat/Lon: ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>Weight: ${String(Number(p.weight).toFixed(2)).replace(/\.00$/, "")}${radius}${movedLine}</p>
+            ${moved ? `<button type="button" class="link-remove-btn" data-putback="${p.nodeKey}">Put it back</button>` : ""}
           </div>
         `);
+        const btn = popup.getElement().querySelector("[data-putback]");
+        if (btn) btn.addEventListener("click", () => { popup.remove(); restoreObserver(p.nodeKey); });
       });
 
+      m.on("click", "t3d-ghost-circle", (e) => {
+        const p = e.features[0].properties;
+        const popup = show3dPopup(e.lngLat, `
+          <div>
+            <p class="popup-title">${p.title} · advertised position</p>
+            <p class="popup-copy">${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}<br>Moved ${Number(p.movedKm).toFixed(1)} km from here.</p>
+            <button type="button" class="link-remove-btn" data-putback="${p.nodeKey}">Put it back</button>
+          </div>
+        `);
+        const btn = popup.getElement().querySelector("[data-putback]");
+        if (btn) btn.addEventListener("click", () => { popup.remove(); restoreObserver(p.nodeKey); });
+      });
+
+      // Drag to reposition (#33b), manual mode only. The node follows the
+      // pointer through the observer source; the ghost and the status line
+      // are drawn on release, when the move is recorded.
+      const dragStart = (e) => {
+        if (!manualMode || !e.features || !e.features.length) return;
+        e.preventDefault();
+        const p = e.features[0].properties;
+        const existing = positionOverrides.get(p.nodeKey);
+        dragState = {
+          id: p.nodeKey,
+          upstream: existing ? existing.upstream : { lat: Number(p.lat), lon: Number(p.lon) },
+          moved: false
+        };
+        m.dragPan.disable();
+        m.getCanvas().style.cursor = "grabbing";
+      };
+      const dragMove = (e) => {
+        if (!dragState) return;
+        dragState.moved = true;
+        placeNode(dragState.id, e.lngLat.lat, e.lngLat.lng, true);
+        const src = m.getSource("t3d-obs");
+        if (src) src.setData(fc3dPoints(currentMatchedNodes));
+      };
+      const dragEnd = (e) => {
+        if (!dragState) return;
+        const state = dragState;
+        dragState = null;
+        m.dragPan.enable();
+        m.getCanvas().style.cursor = "";
+        if (!state.moved) return;
+        if (e && e.originalEvent) e.originalEvent.__dragged = true;
+        moveObserver(state.id, e.lngLat.lat, e.lngLat.lng, state.upstream);
+      };
+      m.on("mousedown", "t3d-obs-circle", dragStart);
+      m.on("touchstart", "t3d-obs-circle", dragStart);
+      m.on("mousemove", dragMove);
+      m.on("touchmove", dragMove);
+      m.on("mouseup", dragEnd);
+      m.on("touchend", dragEnd);
+      m.on("mouseenter", "t3d-obs-circle", () => { if (manualMode && !dragState) m.getCanvas().style.cursor = "grab"; });
+      m.on("mouseleave", "t3d-obs-circle", () => { if (!dragState) m.getCanvas().style.cursor = ""; });
+
       const regionPopup = (e) => {
+        // A region polygon covers its own observers, and every layer under
+        // the point fires; the region's popup would replace the observer's.
+        // The marker under the pointer wins.
+        const markers = m.queryRenderedFeatures(e.point, { layers: ["t3d-obs-circle", "t3d-manual-circle", "t3d-ghost-circle", "t3d-support-circle"] });
+        if (markers.length) return;
         const p = e.features[0].properties;
         const rival = p.rival === 1 || p.rival === "1";
         const popup = show3dPopup(e.lngLat, `
