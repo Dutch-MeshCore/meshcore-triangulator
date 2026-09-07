@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-resolve-on-map-rivals-and-reset",
+    "date": "2026-09-07",
+    "title": "Resolve on map shows the rival regions, and can undo",
+    "body": "Each candidate region now says how many of its prefixes also resolve in another region, on the cards and in the popup, so you can see how much there is to choose. While resolving on the map, the other regions from the same search stay outlined; tap one to switch to it. Picks you changed can go back to the automatic choice, per prefix from the popup or all at once with Reset picks in the banner."
+  },
+  {
     "id": "2026-09-07-whats-new-on-a-phone",
     "date": "2026-09-07",
     "title": "What's new opens on screen on a phone",
