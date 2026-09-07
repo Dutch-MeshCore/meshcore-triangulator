@@ -485,8 +485,15 @@ if (compareIndex !== -1 && args[compareIndex + 1]) {
   const worse = deltas.filter((d) => d.delta > 0.05);
   console.log(`\nvs ${args[compareIndex + 1]}: ${better.length} better, ${worse.length} worse, ` +
     `${deltas.length - better.length - worse.length} unchanged`);
-  console.log(`median error change: ${(percentile(results.map((r) => r.errorKm), 0.5) -
-    percentile([...previous.values()], 0.5)).toFixed(2)} km`);
+  // Paired first: the shift in error over the cases both runs scored. The
+  // set-median line that used to stand alone compares two different case
+  // sets whenever a change alters which clusters come out with a single
+  // node, so 3 newly scored hard cases read as a regression of the estimator.
+  const paired = deltas.map((d) => d.delta);
+  console.log(`paired error change over ${paired.length} cases: ` +
+    `median ${percentile(paired, 0.5).toFixed(2)} km, mean ${(paired.reduce((s, d) => s + d, 0) / paired.length).toFixed(2)} km`);
+  console.log(`set median error change: ${(percentile(results.map((r) => r.errorKm), 0.5) -
+    percentile([...previous.values()], 0.5)).toFixed(2)} km (n ${previous.size} -> ${results.length})`);
   // Regressions are what a summary statistic hides, so name the worst.
   worse.sort((a, b) => b.delta - a.delta).slice(0, 5)
     .forEach((d) => console.log(`  worse: ${d.id} +${d.delta.toFixed(1)} km`));
