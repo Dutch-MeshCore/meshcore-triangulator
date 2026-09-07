@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-drag-an-observer",
+    "date": "2026-09-07",
+    "title": "Drag an observer to where it really is",
+    "body": "Upstream positions are advertised, and sometimes stale or wrong. While resolving on the map you can now drag an observer to correct it. The advertised spot stays as a hollow marker with a dashed line to the new one, the estimate is invalidated until you re-run it, and that observer's proven-link range is set aside because its link distances were measured from the old spot. Put it back from its popup, or all of them with Reset positions. Nothing is saved between visits."
+  },
+  {
     "id": "2026-09-07-terrain-sees-the-whole-area",
     "date": "2026-09-07",
     "title": "Terrain refinement looks across the whole likely area",
