@@ -3217,6 +3217,44 @@
       refresh3dData();
     }
 
+    // The cells the terrain pass re-scores (#57). It used to be the 36 best of
+    // the flat pass, which reorders inside a set chosen without terrain: on
+    // the accuracy fixture the cell holding the true target ranks beyond 36
+    // in 32 of 91 cases, 21 of them inside the tied region (#47), where
+    // terrain is the only thing left that could raise it. Covering the whole
+    // tied region costs minutes of AHN fetches (median 132 cells, p90 432),
+    // so the pool is the 36 best plus a lattice sample of the tied cells:
+    // every 2nd cell on both axes, the stride widened until the pool stays
+    // under TERRAIN_POOL_MAX. On the fixture: median 59 cells, p90 109, max
+    // 144 (stride 2 in 54 cases, 3 in 7, the rest fit in the 36), and the
+    // exact target cell is in the pool in 70 of 91 cases against 59 before.
+    const TERRAIN_POOL_MAX = 150;
+    const TERRAIN_TOP_CELLS = 36;
+
+    function terrainPool(grid, stats, minLat, minLon) {
+      const top = grid.slice(0, TERRAIN_TOP_CELLS);
+      const chosen = new Set(top.map((cell) => `${cell.lat},${cell.lon}`));
+      const tied = (stats && stats.tied) || [];
+      const rest = tied.filter((cell) => !chosen.has(`${cell.lat},${cell.lon}`));
+      const budget = TERRAIN_POOL_MAX - top.length;
+      if (!rest.length || budget <= 0) return { cells: top, stride: 0 };
+      const index = (cell) => [Math.round((cell.lat - minLat) / 0.0075), Math.round((cell.lon - minLon) / 0.01)];
+      for (let stride = 2; stride <= 16; stride++) {
+        const sampled = rest.filter((cell) => {
+          const [i, j] = index(cell);
+          return i % stride === 0 && j % stride === 0;
+        });
+        if (sampled.length <= budget) {
+          return { cells: [...top, ...sampled], stride: sampled.length ? stride : 0 };
+        }
+      }
+      return { cells: top, stride: 0 };
+    }
+
+    function ordinal(n) {
+      return n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
+    }
+
     async function updateHeatmap(matchedNodes, useTerrain = true) {
       const runId = ++heatmapRunId;
       clearEstimateSurface();
@@ -3258,11 +3296,12 @@
         const gap = observerGap(matchedNodes, grid[0]);
         const note = surfaceNote(stats, gap);
         let top = grid.slice(0, 36);
+        let terrainNote = "";
         if (useTerrain) {
-          const terrainCandidates = grid.slice(0, 36);
+          const pool = terrainPool(grid, stats, minLat, minLon);
           // Both terms are log-likelihoods now, so adding them multiplies the
           // underlying probabilities (#45).
-          const terrainScored = await Promise.all(terrainCandidates.map(async (point) => ({
+          const terrainScored = await Promise.all(pool.cells.map(async (point) => ({
             ...point,
             score: point.score + await terrainAnchorScore(point)
           })));
@@ -3271,12 +3310,15 @@
           }
           terrainScored.sort((a, b) => b.score - a.score);
           top = terrainScored.slice(0, 36);
+          terrainNote = pool.stride
+            ? ` Terrain re-scored ${pool.cells.length} cells: the 36 best and every ${ordinal(pool.stride)} cell of that area.`
+            : ` Terrain re-scored the 36 best cells; that area holds no more.`;
         }
         renderLikelihoodSurface(top, grid, stats);
         const best = top[0];
         if (useTerrain) {
           terrainStatus.textContent = best
-            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${note} Terrain re-scored the 36 best cells inside that area.${hop2Note}`
+            ? `Terrain + LOS refinement active. Strongest candidate is near ${formatEstimateLatLon(best)}. ${note}${terrainNote}${hop2Note}`
             : "Terrain + LOS refinement did not return usable candidate cells.";
         } else {
           terrainStatus.textContent = best
