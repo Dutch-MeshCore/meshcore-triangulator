@@ -74,6 +74,8 @@ const extracted = [
   grab(/const MIN_OBSERVATION_LIKELIHOOD = [\de.-]+;/, "MIN_OBSERVATION_LIKELIHOOD"),
   grab(/const SUPPORT_NODE_SCORE_WEIGHT = \d+;/, "SUPPORT_NODE_SCORE_WEIGHT"),
   grab(/function scorePoint\(point, matchedNodes, supportNodes\) \{[\s\S]*?\n    \}/, "scorePoint"),
+  grab(/const TIED_NATS = [\d.]+;/, "TIED_NATS"),
+  grab(/function surfaceStats\(cells, best, weightScale = 1\) \{[\s\S]*?\n    \}/, "surfaceStats"),
   grab(/function connectedComponents\(nodesList, thresholdKm, wideThresholdKm = thresholdKm\) \{[\s\S]*?\n    \}/, "connectedComponents"),
   // Only reached in --prefix mode, see below.
   grab(/function obsPrefix\(node\) \{[\s\S]*?\n    \}/, "obsPrefix"),
@@ -88,7 +90,7 @@ const extracted = [
 const estimator = new Function(`${extracted.join("\n")}
   return { scorePoint, anchorRangeKm, haversineKm, provenRadiusFromLinks, connectedComponents,
            SECOND_HOP_WEIGHT_FACTOR, dedupeByPrefix, centroidOfNodes, firstHopNodes, nodeId,
-           obsPrefix, componentScore, uniquePrefixCount };`)();
+           obsPrefix, componentScore, uniquePrefixCount, surfaceStats, TIED_NATS };`)();
 
 // --prefix <n> feeds observers the way the APP gets them: by n-hex prefix out
 // of the whole node universe, not by full id (#78).
@@ -212,7 +214,9 @@ const lonPad = Number(grab(/Math\.min\(\.\.\.lons\) - (0\.\d+)/, "lon pad").spli
 // How much better is the winning cell than the rest of the search area? A
 // likelihood ratio under e^0.5 either way is not a distinction any operator
 // could act on, so cells inside that band count as tied with the argmax (#69).
-const TIED_NATS = 0.5;
+// The band and the statistics are the page's own surfaceStats() (#47), so
+// what the status line says and what this harness measures are one thing.
+const TIED_NATS = estimator.TIED_NATS;
 
 function estimate(observers) {
   // Grid bounds from the 1st-hop nodes, as updateHeatmap() does (#65).
@@ -236,19 +240,11 @@ function estimate(observers) {
   // Flatness diagnostics. An argmax is only meaningful if the surface it is
   // the max OF has structure; without these, a change can move the reported
   // point without anyone noticing the point was never pinned down.
-  const worst = cells.reduce((low, cell) => Math.min(low, cell.score), Infinity);
-  const tied = cells.filter((cell) => cell.score > best.score - TIED_NATS);
-  const tiedRadiusKm = tied.reduce(
-    (far, cell) => Math.max(far, estimator.haversineKm(cell, best)), 0);
-  return {
-    ...best,
-    // Total log-likelihood range over the whole searched area, in nats.
-    scoreSpanNats: best.score - worst,
-    // Share of the searched area that is tied with the winner.
-    tiedShare: tied.length / cells.length,
-    // How far the tied region reaches from the winning cell.
-    tiedRadiusKm
-  };
+  // scoreSpanNats: total log-likelihood range over the searched area.
+  // tiedShare: share of the searched area tied with the winner.
+  // tiedRadiusKm: how far the tied region reaches from the winning cell.
+  const { scoreSpanNats, tiedShare, tiedRadiusKm } = estimator.surfaceStats(cells, best);
+  return { ...best, scoreSpanNats, tiedShare, tiedRadiusKm };
 }
 
 // Weight is times-heard. The fixture has one reception per observer, so 1,
