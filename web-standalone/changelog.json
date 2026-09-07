@@ -4,6 +4,10 @@
     "date": "2026-09-07",
     "title": "Load an incident straight from the spam detector",
     "body": "Step 1 now has a list of recent incidents from mc-spamdetector.nl and a field for an attack URL or number. Picking one fills the first-hop prefixes with the incident's entry hops, weighted by packets, and finds the region, which used to mean reading the table off the attack page and typing it in. A link with ?incident=2047 does the same."
+    "id": "2026-09-07-cluster-km-12",
+    "date": "2026-09-07",
+    "title": "Cluster km starts at 12 instead of 6",
+    "body": "Two observers of the same node often sit more than 6 km apart, so a 6 km cluster radius split them into separate regions unless a 2nd-hop node happened to bridge them. The default is now 12 km, the same distance the tool assumes a repeater hears. On the accuracy fixture that gives 8 more cases an estimate when only 1st-hop prefixes are entered, and the error goes down in both modes. You can still type any radius."
   },
   {
     "id": "2026-09-07-range-is-the-longest-link",
