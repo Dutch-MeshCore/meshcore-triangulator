@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-cluster-shape-from-first-hop",
+    "date": "2026-09-07",
+    "title": "The cluster's shape comes from 1st-hop observers",
+    "body": "The cluster centre, the yellow region, the span on the candidate cards and the area the estimate searches now follow the 1st-hop observers. 2nd-hop observers still show, still join a cluster and still set an observer's range, but they no longer move its centre or stretch its outline."
+  },
+  {
     "id": "2026-09-07-second-hop-not-scored",
     "date": "2026-09-07",
     "title": "2nd-hop observers no longer pull the estimate",

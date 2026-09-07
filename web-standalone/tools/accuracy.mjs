@@ -77,6 +77,7 @@ const extracted = [
   // Only reached in --prefix mode, see below.
   grab(/function obsPrefix\(node\) \{[\s\S]*?\n    \}/, "obsPrefix"),
   grab(/function nodeId\(node\) \{[\s\S]*?\n    \}/, "nodeId"),
+  grab(/function firstHopNodes\(nodesList\) \{[\s\S]*?\n    \}/, "firstHopNodes"),
   grab(/function centroidOfNodes\(nodesList\) \{[\s\S]*?\n    \}/, "centroidOfNodes"),
   grab(/function dedupeByPrefix\(nodes, centroid, provenNodeIds = new Set\(\)\) \{[\s\S]*?\n    \}/, "dedupeByPrefix"),
   grab(/function uniquePrefixCount\(nodesList\) \{[\s\S]*?\n    \}/, "uniquePrefixCount"),
@@ -85,8 +86,8 @@ const extracted = [
 
 const estimator = new Function(`${extracted.join("\n")}
   return { scorePoint, anchorRangeKm, haversineKm, provenRadiusFromLinks, connectedComponents,
-           SECOND_HOP_WEIGHT_FACTOR, dedupeByPrefix, centroidOfNodes, nodeId, obsPrefix,
-           componentScore, uniquePrefixCount };`)();
+           SECOND_HOP_WEIGHT_FACTOR, dedupeByPrefix, centroidOfNodes, firstHopNodes, nodeId,
+           obsPrefix, componentScore, uniquePrefixCount };`)();
 
 // --prefix <n> feeds observers the way the APP gets them: by n-hex prefix out
 // of the whole node universe, not by full id (#78).
@@ -213,8 +214,10 @@ const lonPad = Number(grab(/Math\.min\(\.\.\.lons\) - (0\.\d+)/, "lon pad").spli
 const TIED_NATS = 0.5;
 
 function estimate(observers) {
-  const lats = observers.map((o) => o.lat);
-  const lons = observers.map((o) => o.lon);
+  // Grid bounds from the 1st-hop nodes, as updateHeatmap() does (#65).
+  const gridNodes = estimator.firstHopNodes(observers);
+  const lats = gridNodes.map((o) => o.lat);
+  const lons = gridNodes.map((o) => o.lon);
   const minLat = Math.min(...lats) - latPad;
   const maxLat = Math.max(...lats) + latPad;
   const minLon = Math.min(...lons) - lonPad;

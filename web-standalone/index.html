@@ -1703,8 +1703,21 @@
       return lower.concat(upper);
     }
 
+    // The nodes that define a cluster's geometry (#65). A 2nd-hop observation
+    // is a wider, weaker constraint than a 1st-hop one, so it bounds the
+    // region rather than sitting inside it as a peer. Falls back to the whole
+    // list when nothing in it is 1st-hop, so a cluster is never geometry-less.
+    function firstHopNodes(nodesList) {
+      const direct = nodesList.filter((node) => (node.hop || 1) !== 2);
+      return direct.length ? direct : nodesList;
+    }
+
+    // Weighted centre of the 1st-hop nodes. Every consumer (cluster centre,
+    // dedupe tie-break, candidate and clue-centre markers, initial map view)
+    // wants the centre of the direct evidence, not of the 2nd-hop nodes that
+    // happen to hang off it (#65).
     function centroidOfNodes(nodesList) {
-      const total = nodesList.reduce((acc, node) => {
+      const total = firstHopNodes(nodesList).reduce((acc, node) => {
         acc.lat += node.lat * node.weight;
         acc.lon += node.lon * node.weight;
         acc.weight += node.weight;
@@ -2236,9 +2249,22 @@
           });
         }
         const componentNodes = componentIndexes.map((componentIndex) => nodesList[componentIndex]);
+        // Span is the reach of the direct evidence, so it is measured over the
+        // 1st-hop members (#65). With every node in it, the number shown to the
+        // operator (and the compactness term in componentScore) was set by
+        // the weakest clue in the component. 2nd-hop nodes still join the
+        // component: on the accuracy fixture they are what links 1st-hop
+        // observers that sit more than Cluster km apart (#103).
+        // One direct node has no span of its own, so a component with fewer
+        // than two keeps the spread of everything in it. Otherwise a lone
+        // 1st-hop node with 2nd-hop nodes around it would read as perfectly
+        // compact and take the full compactness bonus in the ranking; on the
+        // fixture that put 3 such components at rank 1 over real clusters.
+        const direct = componentNodes.filter((n) => (n.hop || 1) !== 2);
+        const spanNodes = direct.length >= 2 ? direct : componentNodes;
         let maxPairKm = 0;
-        componentNodes.forEach((a, aIndex) => {
-          componentNodes.slice(aIndex + 1).forEach((b) => {
+        spanNodes.forEach((a, aIndex) => {
+          spanNodes.slice(aIndex + 1).forEach((b) => {
             maxPairKm = Math.max(maxPairKm, haversineKm(a, b));
           });
         });
@@ -2896,7 +2922,11 @@
         const supportNodes = currentSupportNodes;
         const hop2Note = secondHopNotScoredNote(matchedNodes);
         const anchors = currentRfAnchors.length ? currentRfAnchors : matchedNodes;
-        const candidateNodes = [...matchedNodes, ...supportNodes, ...anchors];
+        // Search bounds follow the 1st-hop nodes (#65). scorePoint() does not
+        // score 2nd-hop nodes (#46), so a far one only stretched the grid.
+        // Measured on the accuracy fixture, paired: 27 better / 17 worse / 44
+        // unchanged, worst +0.5 km. Support nodes still count; that is #44.
+        const candidateNodes = [...firstHopNodes(matchedNodes), ...supportNodes, ...firstHopNodes(anchors)];
         const lats = candidateNodes.map((node) => node.lat);
         const lons = candidateNodes.map((node) => node.lon);
         const minLat = Math.min(...lats) - 0.035;
@@ -3924,13 +3954,15 @@
           prefixes: uniquePrefixCount(candidate.nodes),
           hits: candidate.nodes.length
         };
-        const ring = ringFromNodes(candidate.nodes);
+        // Candidate outline from its 1st-hop nodes (#65), same as the clue zone.
+        const outlineNodes = firstHopNodes(candidate.nodes);
+        const ring = ringFromNodes(outlineNodes);
         if (ring) {
           features.push({ type: "Feature", geometry: { type: "Polygon", coordinates: [ring] }, properties: props });
-        } else if (candidate.nodes.length === 2) {
+        } else if (outlineNodes.length === 2) {
           features.push({
             type: "Feature",
-            geometry: { type: "LineString", coordinates: candidate.nodes.map((n) => [n.lon, n.lat]) },
+            geometry: { type: "LineString", coordinates: outlineNodes.map((n) => [n.lon, n.lat]) },
             properties: props
           });
         }
@@ -4022,7 +4054,10 @@
     // The clue zone: hull of the resolved observers plus its centroid, the
     // yellow region on the 2D map. Also Leaflet-only until now.
     function clueZoneFeatures3d() {
-      const nodes = (currentMatchedNodes || []).filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lon));
+      // Hull of the direct evidence (#65). 2nd-hop nodes still render as
+      // observers, but the yellow region is the 1st-hop hull, the same shape
+      // filterToHullShape() tests them against.
+      const nodes = firstHopNodes(currentMatchedNodes || []).filter((n) => Number.isFinite(n.lat) && Number.isFinite(n.lon));
       const features = [];
       if (!nodes.length) return { type: "FeatureCollection", features };
       const ring = ringFromNodes(nodes);
