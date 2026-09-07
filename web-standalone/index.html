@@ -1580,6 +1580,126 @@
         `Asking mc-radar which repeaters heard each other, up to ${PROVEN_LINK_NODE_BUDGET} nodes`
       ];
     }
+
+    // ── The scene in the link (#123) ────────────────────────────────────────
+    // A shared link carries what happened after Step 1: the locked region (by
+    // centroid, since ranks shift and centroids do not), observer edits,
+    // moved repeaters, removed links, which estimate ran, the layer switch
+    // and the relief slider. Each only when it differs from what the app
+    // would do on its own, so a plain query stays a plain query. Nodes are
+    // named by the first 8 hex of their key; whole keys would make a 20
+    // observer link 1.3 KB.
+    let lockedRegionCentroid = null;
+    let autoObserverSignature = "";
+    const removedLinkIds = new Set();
+    let lastEstimateTerrain = false;
+    let layersTouched = false;
+    let pendingScene = null;
+    let deepLinkLoadingToken = 0;
+    const SCENE_REGION_MATCH_KM = 15;
+
+    function shortKey(id) {
+      return String(id).slice(0, 8);
+    }
+
+    function observerSignature() {
+      return currentMatchedNodes
+        .map((node) => `${shortKey(nodeId(node))}:${Number((node.weight || 1).toFixed(2))}`)
+        .sort()
+        .join(",");
+    }
+
+    // Everything the address bar should say right now. Called from
+    // syncControlStates(), which every state change already runs through.
+    function syncAddressBar() {
+      if (!window.history || !window.history.replaceState) return;
+      const url = buildShareUrl();
+      const target = url ? url.slice(window.location.origin.length) : window.location.pathname;
+      if (target === window.location.pathname + window.location.search) return;
+      try {
+        window.history.replaceState(null, "", target);
+      } catch (error) {
+        // file:// and some embedded views refuse; the Share button still works.
+      }
+    }
+
+    // After discovery: the link named a region, pick the candidate nearest to
+    // it and carry on with the rest of the scene once it is locked.
+    function restoreSceneRegion(candidates) {
+      const scene = pendingScene;
+      if (!scene || !scene.region) return false;
+      let best = null;
+      candidates.forEach((candidate) => {
+        const km = haversineKm(centroidOfNodes(candidate.nodes), scene.region);
+        if (km <= SCENE_REGION_MATCH_KM && (!best || km < best.km)) best = { candidate, km };
+      });
+      if (!best) {
+        pendingScene = null;
+        discoverStatus.textContent += ` The link's region (${scene.region.lat.toFixed(3)}, ${scene.region.lon.toFixed(3)}) is not among these candidates; pick one.`;
+        return false;
+      }
+      const token = showLoading(...regionLoadingText(best.candidate.rank));
+      activateCandidateRegion(best.candidate)
+        .then(() => applyPendingScene())
+        .finally(() => hideLoading(token));
+      return true;
+    }
+
+    async function applyPendingScene() {
+      const scene = pendingScene;
+      pendingScene = null;
+      if (!scene || !currentResolvedContext) return;
+      const pool = lockedObserverPool.length ? lockedObserverPool : (currentResolvedContext.matches || []);
+      const byShort = (short) => pool.find((node) => nodeId(node).startsWith(String(short).toLowerCase()));
+      const notes = [];
+      const missing = [];
+      if (scene.obs) {
+        const selected = [];
+        scene.obs.split(",").forEach((item) => {
+          const [short, weight] = item.split(":");
+          const node = byShort(short);
+          if (!node) { missing.push(short.toUpperCase()); return; }
+          const w = Number.parseFloat(weight);
+          selected.push({ id: nodeId(node), weight: Number.isFinite(w) && w > 0 ? w : 1 });
+        });
+        if (selected.length) {
+          reweightLockedCluster(selected);
+          notes.push(`${selected.length} observer${selected.length === 1 ? "" : "s"} as in the link`);
+        }
+      }
+      if (scene.moved) {
+        let moved = 0;
+        scene.moved.split(";").forEach((item) => {
+          const [short, latLon] = item.split("@");
+          const [lat, lon] = String(latLon || "").split(",").map(Number);
+          const node = byShort(short);
+          if (!node || !Number.isFinite(lat) || !Number.isFinite(lon)) { missing.push(String(short).toUpperCase()); return; }
+          moveObserver(nodeId(node), lat, lon, { lat: node.lat, lon: node.lon });
+          moved += 1;
+        });
+        if (moved) notes.push(`${moved} moved`);
+      }
+      if (scene.droplink) {
+        let dropped = 0;
+        scene.droplink.split(";").forEach((pair) => {
+          const [a, b] = pair.split("-").map((x) => String(x).toLowerCase());
+          const link = currentProvenLinks.find((l) => nodeId(l.from).startsWith(a) && nodeId(l.to).startsWith(b));
+          if (!link) { missing.push(pair.toUpperCase()); return; }
+          removeProvenLink(provenLinkId(link));
+          dropped += 1;
+        });
+        if (dropped) notes.push(`${dropped} link${dropped === 1 ? "" : "s"} removed`);
+      }
+      if (notes.length || missing.length) {
+        clusterEditorStatus.textContent = (notes.length ? `Restored from the link: ${notes.join(", ")}.` : "")
+          + (missing.length ? ` Not in this cluster any more: ${missing.join(", ")}.` : "");
+      }
+      if (scene.est) {
+        await runObserverEstimate();
+        if (scene.est === "terrain") await runTerrainRescore();
+      }
+      syncControlStates();
+    }
     const discoverStatus = document.getElementById("discover-status");
     const clusterStatus = document.getElementById("cluster-status");
     const candidateList = document.getElementById("candidate-list");
@@ -1814,6 +1934,7 @@
       // Same rule as the manual-mode button: the evidence layers exist once
       // a cluster is locked, so the switch appears with them (#119).
       if (layerChips) layerChips.hidden = !hasRegion;
+      syncAddressBar();
     }
 
     // ── Share link (#34) ────────────────────────────────────────────────────
@@ -1836,10 +1957,26 @@
       };
       addIfChanged(hop2RadiusInput, "hop2");
       addIfChanged(regionRadiusInput, "cluster");
-      // ":" and "," are legal unencoded in a query string; URLSearchParams
+      // The scene (#123), each part only when it differs from the automatic
+      // outcome.
+      if (currentResolvedContext && lockedRegionCentroid) {
+        params.set("region", `${lockedRegionCentroid.lat.toFixed(3)},${lockedRegionCentroid.lon.toFixed(3)}`);
+        const signature = observerSignature();
+        if (signature && signature !== autoObserverSignature) params.set("obs", signature);
+        if (positionOverrides.size) {
+          params.set("moved", [...positionOverrides].map(([id, o]) => `${shortKey(id)}@${o.lat.toFixed(4)},${o.lon.toFixed(4)}`).join(";"));
+        }
+        if (removedLinkIds.size) {
+          params.set("droplink", [...removedLinkIds].map((id) => id.split("->").map(shortKey).join("-")).join(";"));
+        }
+        if (hasObserverEstimate) params.set("est", lastEstimateTerrain ? "terrain" : "observer");
+      }
+      if (layersTouched) params.set("layers", Object.keys(LAYER_GROUPS).filter((g) => layerVisible[g]).join(",") || "none");
+      addIfChanged(terrainExaggerationInput, "relief");
+      // ":" "," "@" ";" are legal unencoded in a query string; URLSearchParams
       // escapes them anyway. Restore them — these links get pasted into chat,
       // so "?prefixes=db:30,23" beats "?prefixes=db%3A30%2C23".
-      const query = params.toString().replace(/%3A/g, ":").replace(/%2C/g, ",");
+      const query = params.toString().replace(/%3A/g, ":").replace(/%2C/g, ",").replace(/%40/g, "@").replace(/%3B/g, ";");
       return `${window.location.origin}${window.location.pathname}?${query}`;
     }
 
@@ -1984,7 +2121,9 @@
         const chip = event.target.closest(".layer-chip");
         if (!chip) return;
         layerVisible[chip.dataset.layer] = !layerVisible[chip.dataset.layer];
+        layersTouched = true;
         applyLayerVisibility();
+        syncAddressBar();
       });
     }
 
@@ -2467,6 +2606,7 @@
       const before = currentProvenLinks.length;
       currentProvenLinks = currentProvenLinks.filter((link) => provenLinkId(link) !== linkId);
       if (currentProvenLinks.length === before) return;
+      removedLinkIds.add(linkId);
       recomputeProvenRadii();
       currentRfAnchors = deriveAnchors(currentMatchedNodes);
       hasObserverEstimate = false;
@@ -3976,6 +4116,8 @@
 
     async function activateCandidateRegion(candidate, runId = discoveryRunId) {
       const clusterNodes = candidate.nodes.map((node) => ({ ...node }));
+      lockedRegionCentroid = centroidOfNodes(candidate.nodes);
+      removedLinkIds.clear();
       const clusterKeys = new Set(clusterNodes.map((node) => node.public_key || node.key));
       const supportNodeMap = new Map();
       const provenLinks = [];
@@ -4086,6 +4228,7 @@
       });
 
       currentMatchedNodes = dedupedNodes;
+      autoObserverSignature = observerSignature();
       currentSupportNodes = supportNodes;
       currentRfAnchors = deriveAnchors(dedupedNodes);
       currentResolvedContext = {
@@ -4288,6 +4431,7 @@
         selectedCandidateRegionId = null;
         renderCandidateList();
         revealOnNarrow(document.getElementById("panel-cluster"));
+        restoreSceneRegion(components);
         clearClueZone();
         clearEstimateSurface();
         currentMatchedNodes = [];
@@ -4318,7 +4462,7 @@
         if (runId === discoveryRunId) {
           discoverButton.disabled = false;
         }
-        hideLoading();
+        hideLoading(deepLinkLoadingToken);
         introLoadingDone();
         syncControlStates();
       }
@@ -4336,6 +4480,7 @@
       try {
         await updateHeatmap(currentMatchedNodes, false);
         hasObserverEstimate = true;
+        lastEstimateTerrain = false;
         open3DView(true);   // tilt the (flat) 3D view into perspective on the estimate
       } finally {
         estimateButton.disabled = false;
@@ -4357,6 +4502,7 @@
       updateWorkflowSteps("terrain");
       try {
         await updateHeatmap(currentMatchedNodes, true);
+        lastEstimateTerrain = true;
         updateWorkflowSteps("done");
       } finally {
         terrainRescoreButton.disabled = false;
@@ -4395,7 +4541,7 @@
     if (shareButton) shareButton.addEventListener("click", shareCurrentQuery);
     // Any Step 1 edit invalidates a shown link/confirmation.
     [prefixInput, prefix2Input, hop2RadiusInput, regionRadiusInput].forEach((el) => {
-      if (el) el.addEventListener("input", () => resetShareUi());
+      if (el) el.addEventListener("input", () => { resetShareUi(); syncAddressBar(); });
     });
     terrainRescoreButton.addEventListener("click", runTerrainRescore);
     applyClusterWeightsButton.addEventListener("click", () => {
@@ -5369,7 +5515,7 @@
 
 
     if (terrainExaggerationInput) {
-      terrainExaggerationInput.addEventListener("input", applyTerrainExaggeration);
+      terrainExaggerationInput.addEventListener("input", () => { applyTerrainExaggeration(); syncAddressBar(); });
     }
 
 
@@ -5475,6 +5621,31 @@
     // import runs discovery itself, so it returns false here.
     function applyDeepLinkParams() {
       const params = new URLSearchParams(window.location.search);
+      // Cosmetic parts of the scene apply before anything loads (#123).
+      const layers = params.get("layers");
+      if (layers !== null) {
+        const on = new Set(layers.split(",").filter(Boolean));
+        Object.keys(LAYER_GROUPS).forEach((group) => { layerVisible[group] = on.has(group); });
+        layersTouched = true;
+      }
+      const relief = Number.parseFloat(params.get("relief"));
+      if (Number.isFinite(relief) && terrainExaggerationInput) {
+        terrainExaggerationInput.value = String(relief);
+        applyTerrainExaggeration();
+      }
+      const regionText = params.get("region");
+      if (regionText) {
+        const [lat, lon] = regionText.split(",").map(Number);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          pendingScene = {
+            region: { lat, lon },
+            obs: params.get("obs") || null,
+            moved: params.get("moved") || null,
+            droplink: params.get("droplink") || null,
+            est: ["observer", "terrain"].includes(params.get("est")) ? params.get("est") : null
+          };
+        }
+      }
       const prefixes = params.get("prefixes");
       if (!prefixes) {
         const incident = params.get("incident");
@@ -5542,7 +5713,7 @@
       // First-timers get the explainer as their wait screen; everyone else
       // keeps the plain auto-dismissing splash from #26.
       if (showIntro) openIntro(true);
-      else showLoading("Loading your shared link…", "Resolving prefixes and finding the best matching region");
+      else deepLinkLoadingToken = showLoading("Loading your shared link…", "Resolving prefixes and finding the best matching region");
       discoverButton.click();
     } else if (showIntro) {
       openIntro(false);
