@@ -243,7 +243,14 @@
     /* Meta/product actions (help, changelog) sit apart from the map actions
        so they don't read as part of the Step 1-3 task flow. The first one
        opens the right-aligned group; the rest follow it. */
-    .controls-card .is-meta-first {
+    /* The help and What's new buttons stay together at the right, and wrap
+       as one unit. Wrapping them separately left the bell alone at the far
+       left of a second row on a phone, with the panel anchored to it opening
+       off-screen (#112). */
+    .controls-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       margin-left: auto;
     }
     .controls-card button.is-icon {
@@ -1238,6 +1245,18 @@
       .topbar-nav {
         gap: 10px;
       }
+      /* On a narrow screen the What's new panel is a sheet at the bottom of
+         the viewport instead of a dropdown under the bell, whose position
+         depends on how the button row wrapped (#112). */
+      .whats-new-panel {
+        position: fixed;
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: auto;
+        max-height: 60vh;
+      }
     }
   </style>
 </head>
@@ -1378,7 +1397,8 @@
           <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
           <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
           <button id="share-button" type="button" class="button-secondary">Share</button>
-          <button id="intro-open-button" type="button" class="button-muted is-icon is-meta-first" aria-label="How this works" title="How this works">?</button>
+          <div class="controls-meta">
+          <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
           <div class="whats-new">
             <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
               <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
@@ -1386,6 +1406,7 @@
             <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
               <div id="whats-new-list"></div>
             </div>
+          </div>
           </div>
           <!-- Full-width rows last: they wrap below the button row rather
                than pushing the right-aligned bell onto a second line. -->

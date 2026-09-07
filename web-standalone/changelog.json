@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-07-whats-new-on-a-phone",
+    "date": "2026-09-07",
+    "title": "What's new opens on screen on a phone",
+    "body": "On a phone, once a cluster was locked and the Resolve on map button appeared, the bell dropped to a line of its own at the far left and the What's new panel opened off the left edge of the screen. The help and bell buttons now stay together at the right, and on a narrow screen the panel opens as a sheet at the bottom of the screen."
+  },
+  {
     "id": "2026-09-07-how-sure-is-the-estimate",
     "date": "2026-09-07",
     "title": "The estimate now says how sure it is",
