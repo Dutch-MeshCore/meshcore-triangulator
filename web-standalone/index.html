@@ -3707,12 +3707,39 @@
       refresh3dData();
     }
 
+    // ── Map palette (#139) ──────────────────────────────────────────────
+    // MapLibre paint takes colour strings, not var(), so these are literals —
+    // but they are the brand constants, and brand constants are theme-identical
+    // by definition. That also happens to be required here: the basemap is the
+    // light OpenStreetMap raster in BOTH themes, so a colour that flipped with
+    // the theme would be unreadable half the time.
+    //
+    // Three roles, so six layers do not fight over four hues:
+    //   green  what is known      observers, proven links
+    //   blue   what is assumed    coverage ranges, candidate regions
+    //   warm   where the target is  heat scale, estimate markers
+    const MAP = {
+      known: "#3ecf8e",        // --green
+      knownDim: "#2ea875",
+      assumed: "#1976e8",      // --blue
+      assumedLight: "#74adff", // --accent-light
+      neutral: "#8a90ab",      // unselected candidates, --text-faint (light)
+      // The heat ramp runs yellow -> red: two brand constants with three
+      // interpolations between them, so "hotter" reads as one direction
+      // instead of a rainbow that collides with the other two roles.
+      heat: ["#f5c542", "#f0a634", "#ea8228", "#e45122", "#df2020"],
+      target: "#df2020",       // --red, the strongest candidate
+      targetSoft: "#f5c542",   // --yellow, the runners-up
+      ink: "#060709",          // --bg, for halos and strokes on a light basemap
+      paper: "#ffffff"
+    };
+
     function colorForScore(score) {
-      if (score > 0.82) return "#ff4d4d";
-      if (score > 0.68) return "#ff8c42";
-      if (score > 0.54) return "#ffd166";
-      if (score > 0.38) return "#9be564";
-      return "#4cc9f0";
+      if (score > 0.82) return MAP.heat[4];
+      if (score > 0.68) return MAP.heat[3];
+      if (score > 0.54) return MAP.heat[2];
+      if (score > 0.38) return MAP.heat[1];
+      return MAP.heat[0];
     }
 
     function opacityForScore(score) {
@@ -5864,7 +5891,7 @@
         id: "t3d-hillshade",
         type: "hillshade",
         source: "t3d-dem",
-        paint: { "hillshade-exaggeration": 0.45, "hillshade-shadow-color": "#0a1b24" }
+        paint: { "hillshade-exaggeration": 0.45, "hillshade-shadow-color": MAP.ink }
       });
       terrainAvailable = true;
       applyTerrainExaggeration();
@@ -5878,7 +5905,7 @@
       m.addLayer({
         id: "t3d-heat-fill", type: "fill", source: "t3d-heat",
         paint: {
-          "fill-color": ["step", ["get", "norm"], "#4cc9f0", 0.38, "#9be564", 0.54, "#ffd166", 0.68, "#ff8c42", 0.82, "#ff4d4d"],
+          "fill-color": ["step", ["get", "norm"], MAP.heat[0], 0.38, MAP.heat[1], 0.54, MAP.heat[2], 0.68, MAP.heat[3], 0.82, MAP.heat[4]],
           "fill-opacity": ["+", 0.14, ["*", ["get", "norm"], 0.34]]
         }
       });
@@ -5887,25 +5914,25 @@
       m.addLayer({
         id: "t3d-cluezone-fill", type: "fill", source: "t3d-cluezone",
         filter: ["==", ["geometry-type"], "Polygon"],
-        paint: { "fill-color": "#f8e45c", "fill-opacity": 0.12 }
+        paint: { "fill-color": MAP.neutral, "fill-opacity": 0.14 }
       });
       m.addLayer({
         id: "t3d-cluezone-line", type: "line", source: "t3d-cluezone",
-        paint: { "line-color": "#f8e45c", "line-width": 2, "line-opacity": 0.85 }
+        paint: { "line-color": MAP.neutral, "line-width": 2, "line-opacity": 0.85 }
       });
       m.addSource("t3d-esthull", { type: "geojson", data: estimateHullFeature3d() });
       m.addLayer({
         id: "t3d-esthull-fill", type: "fill", source: "t3d-esthull",
         filter: ["==", ["geometry-type"], "Polygon"],
-        paint: { "fill-color": "#111111", "fill-opacity": 0.04 }
+        paint: { "fill-color": MAP.ink, "fill-opacity": 0.04 }
       });
       m.addLayer({
         id: "t3d-esthull-line", type: "line", source: "t3d-esthull",
-        paint: { "line-color": "#111111", "line-width": 2, "line-opacity": 0.9, "line-dasharray": [4, 3] }
+        paint: { "line-color": MAP.ink, "line-width": 2, "line-opacity": 0.9, "line-dasharray": [4, 3] }
       });
       m.addSource("t3d-ranges", { type: "geojson", data: rangePolygonFeatures3d() });
-      m.addLayer({ id: "t3d-ranges-fill", type: "fill", source: "t3d-ranges", paint: { "fill-color": "#e6007e", "fill-opacity": 0.12 } });
-      m.addLayer({ id: "t3d-ranges-line", type: "line", source: "t3d-ranges", paint: { "line-color": "#e6007e", "line-width": 2 } });
+      m.addLayer({ id: "t3d-ranges-fill", type: "fill", source: "t3d-ranges", paint: { "fill-color": MAP.assumed, "fill-opacity": 0.10 } });
+      m.addLayer({ id: "t3d-ranges-line", type: "line", source: "t3d-ranges", paint: { "line-color": MAP.assumedLight, "line-width": 2 } });
       // Candidate regions (was candidateLayer). Selected reads green and
       // heavier, exactly as the 2D hulls do.
       m.addSource("t3d-candidates", { type: "geojson", data: candidateFeatures3d() });
@@ -5913,14 +5940,14 @@
         id: "t3d-candidates-fill", type: "fill", source: "t3d-candidates",
         filter: ["==", ["geometry-type"], "Polygon"],
         paint: {
-          "fill-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
+          "fill-color": ["case", ["==", ["get", "selected"], 1], MAP.assumed, MAP.neutral],
           "fill-opacity": ["case", ["==", ["get", "selected"], 1], 0.12, ["==", ["get", "rival"], 1], 0.04, 0.07]
         }
       });
       m.addLayer({
         id: "t3d-candidates-line", type: "line", source: "t3d-candidates",
         paint: {
-          "line-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
+          "line-color": ["case", ["==", ["get", "selected"], 1], MAP.assumed, MAP.neutral],
           "line-width": ["case", ["==", ["get", "selected"], 1], 3, 2],
           "line-opacity": ["case", ["==", ["get", "rival"], 1], 0.5, 0.9]
         }
@@ -5930,13 +5957,13 @@
         id: "t3d-candidate-pts-circle", type: "circle", source: "t3d-candidate-pts",
         paint: {
           "circle-radius": ["case", ["==", ["get", "selected"], 1], 9, 7],
-          "circle-color": ["case", ["==", ["get", "selected"], 1], "#9be564", "#7dd3fc"],
-          "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+          "circle-color": ["case", ["==", ["get", "selected"], 1], MAP.assumed, MAP.neutral],
+          "circle-stroke-color": MAP.paper, "circle-stroke-width": 2,
           "circle-opacity": ["case", ["==", ["get", "rival"], 1], 0.6, 0.95]
         }
       });
       m.addSource("t3d-links", { type: "geojson", data: linkFeatures3d() });
-      m.addLayer({ id: "t3d-links-line", type: "line", source: "t3d-links", paint: { "line-color": "#3fc1a0", "line-width": 2, "line-opacity": 0.85 } });
+      m.addLayer({ id: "t3d-links-line", type: "line", source: "t3d-links", paint: { "line-color": MAP.known, "line-width": 2, "line-opacity": 0.85 } });
       // Duplicate-prefix alternatives (was manualLayer). MapLibre cannot dash a
       // circle's stroke, so the alternative reads as accent-ringed-on-dark
       // rather than dashed; the connector line carries the dash instead.
@@ -5953,56 +5980,56 @@
           "text-allow-overlap": true,
           "text-ignore-placement": true
         },
-        paint: { "text-color": "#8ef0d1", "text-halo-color": "#0a1b24", "text-halo-width": 1.2 }
+        paint: { "text-color": MAP.known, "text-halo-color": MAP.ink, "text-halo-width": 1.2 }
       });
       m.addSource("t3d-support", { type: "geojson", data: supportFeatures3d() });
       m.addLayer({
         id: "t3d-support-circle", type: "circle", source: "t3d-support",
         paint: {
-          "circle-radius": 5, "circle-color": "#7dd3fc", "circle-opacity": 0.6,
-          "circle-stroke-color": "#0a1b24", "circle-stroke-width": 2, "circle-stroke-opacity": 0.6
+          "circle-radius": 5, "circle-color": MAP.knownDim, "circle-opacity": 0.6,
+          "circle-stroke-color": MAP.ink, "circle-stroke-width": 2, "circle-stroke-opacity": 0.6
         }
       });
       m.addSource("t3d-manual", { type: "geojson", data: manualFeatures3d() });
       m.addLayer({
         id: "t3d-manual-line", type: "line", source: "t3d-manual",
-        paint: { "line-color": "#9be564", "line-width": 2, "line-opacity": 0.55, "line-dasharray": [2, 2.5] }
+        paint: { "line-color": MAP.known, "line-width": 2, "line-opacity": 0.55, "line-dasharray": [2, 2.5] }
       });
       m.addLayer({
         id: "t3d-manual-circle", type: "circle", source: "t3d-manual",
         filter: ["==", ["geometry-type"], "Point"],
         paint: {
-          "circle-radius": 7, "circle-color": "rgba(7, 17, 24, 0.55)",
-          "circle-stroke-color": "#9be564", "circle-stroke-width": 3
+          "circle-radius": 7, "circle-color": MAP.ink,
+          "circle-stroke-color": MAP.known, "circle-stroke-width": 3
         }
       });
       m.addSource("t3d-obs", { type: "geojson", data: fc3dPoints(currentMatchedNodes) });
-      m.addLayer({ id: "t3d-obs-circle", type: "circle", source: "t3d-obs", paint: { "circle-radius": 6, "circle-color": "#9be564", "circle-stroke-color": "#0a1b24", "circle-stroke-width": 2 } });
-      m.addLayer({ id: "t3d-obs-label", type: "symbol", source: "t3d-obs", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-allow-overlap": false }, paint: { "text-color": "#eaf6ff", "text-halo-color": "#0a1b24", "text-halo-width": 1.4 } });
+      m.addLayer({ id: "t3d-obs-circle", type: "circle", source: "t3d-obs", paint: { "circle-radius": 6, "circle-color": MAP.known, "circle-stroke-color": MAP.ink, "circle-stroke-width": 2 } });
+      m.addLayer({ id: "t3d-obs-label", type: "symbol", source: "t3d-obs", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-allow-overlap": false }, paint: { "text-color": MAP.paper, "text-halo-color": MAP.ink, "text-halo-width": 1.4 } });
       m.addSource("t3d-ghost", { type: "geojson", data: ghostFeatures3d() });
       m.addLayer({
         id: "t3d-ghost-line", type: "line", source: "t3d-ghost",
         filter: ["==", ["geometry-type"], "LineString"],
-        paint: { "line-color": "#9be564", "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [2, 2] }
+        paint: { "line-color": MAP.known, "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [2, 2] }
       });
       m.addLayer({
         id: "t3d-ghost-circle", type: "circle", source: "t3d-ghost",
         filter: ["==", ["geometry-type"], "Point"],
-        paint: { "circle-radius": 6, "circle-color": "#0a1b24", "circle-opacity": 0.35, "circle-stroke-color": "#9be564", "circle-stroke-width": 2 }
+        paint: { "circle-radius": 6, "circle-color": MAP.ink, "circle-opacity": 0.35, "circle-stroke-color": MAP.known, "circle-stroke-width": 2 }
       });
       m.addSource("t3d-clue-centre", { type: "geojson", data: clueCentreFeature3d() });
       m.addLayer({
         id: "t3d-clue-centre-circle", type: "circle", source: "t3d-clue-centre",
         paint: {
-          "circle-radius": 8, "circle-color": "#f8e45c", "circle-opacity": 0.95,
-          "circle-stroke-color": "#fff7b2", "circle-stroke-width": 2
+          "circle-radius": 8, "circle-color": MAP.targetSoft, "circle-opacity": 0.95,
+          "circle-stroke-color": MAP.paper, "circle-stroke-width": 2
         }
       });
       m.addSource("t3d-est", { type: "geojson", data: estFeatures3d() });
       m.addLayer({ id: "t3d-est-circle", type: "circle", source: "t3d-est", paint: {
         "circle-radius": ["case", ["==", ["get", "best"], 1], 9, 5],
-        "circle-color": ["case", ["==", ["get", "best"], 1], "#ffb703", "#ffd166"],
-        "circle-stroke-color": "#5a4a00", "circle-stroke-width": 2
+        "circle-color": ["case", ["==", ["get", "best"], 1], MAP.target, MAP.targetSoft],
+        "circle-stroke-color": MAP.ink, "circle-stroke-width": 2
       } });
     }
 

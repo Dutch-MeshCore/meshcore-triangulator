@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-dmc-house-style",
+    "date": "2026-09-10",
+    "title": "The triangulator looks like the rest of DutchMeshCore",
+    "body": "It now uses the shared DMC design system: the brand red, white and blue, Aldrich and IBM Plex, and the tricolour band every DMC page opens with. There is a light theme for the first time, in the top right, and the map's colours now say one thing consistently: green is what we know, blue what we assume, warm where the target is."
+  },
+  {
     "id": "2026-09-10-step-1-starts-active",
     "date": "2026-09-10",
     "title": "Step 1 is ready the moment the page opens",
