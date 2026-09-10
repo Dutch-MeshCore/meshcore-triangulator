@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MC Repeater Map</title>
+  <script>
+    // Runs before the stylesheet so a saved light theme never flashes dark
+    // (STYLE-GUIDE §5). Canonical key, shared across the DMC subdomains.
+    try {
+      var t = localStorage.getItem("meshcore-theme") || "dark";
+      var light = t === "light" ||
+        (t === "system" && matchMedia("(prefers-color-scheme: light)").matches);
+      if (light) document.documentElement.setAttribute("data-theme", "light");
+    } catch (e) {}
+  </script>
   <link
     rel="stylesheet"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -95,6 +105,15 @@
       --grid-opacity: 0.28;
       --scan-opacity: 0.11;
 
+      /* App-level surfaces the guide does not name. Defined in both roots so
+         no rule below has to know which theme is running. Values sit on the
+         neutral near-black ground, not the teal the app used to have. */
+      --field-bg: rgba(6, 7, 10, 0.90);
+      --menu-bg: rgba(11, 13, 18, 0.97);
+      --chip-bg: rgba(255, 255, 255, 0.05);
+      --scrim: rgba(3, 4, 6, 0.62);
+      --raised: rgba(255, 255, 255, 0.10);
+
       /* Type. */
       --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
       --font-head: 'Aldrich', 'Segoe UI', system-ui, sans-serif;
@@ -108,6 +127,49 @@
       /* Geometry: one base radius for controls, one for large surfaces. */
       --radius: 8px;
       --radius-lg: 16px;
+    }
+
+    /* Light is an override on the same token names, so nothing below this
+       block changes (STYLE-GUIDE §5). Dark stays the default: no attribute
+       on <html> means dark. */
+    :root[data-theme="light"] {
+      color-scheme: light;
+
+      --bg: #f4f6fb;
+      --text: #1a1c2e;
+      --text-muted: #5c6487;
+      --text-faint: #8a90ab;
+      --heading: #1a1c2e;
+      --link: #3d6fdb;
+      --accent: #3d6fdb;
+      --accent-light: #5b86e5;
+      --accent-strong: #3455b0;
+      --border: #cdd2e8;
+      --border-strong: #b5bce0;
+      --surface-hover: #eef0f8;
+      --code-bg: rgba(20, 30, 60, 0.06);
+
+      --success: #1a9e6e;
+      --warning: #a07008;
+      --danger: #c43a3a;
+      --danger-text: #c43a3a;
+
+      --surface: #ffffff;
+      --surface-2: #eef0f8;
+      --surface-shadow: 0 10px 26px rgba(20, 30, 60, 0.08);
+      /* Flat ground, and the two overlays switched off by their tokens. */
+      --body-bg: none;
+      --sheen-opacity: 0;
+      --grid-opacity: 0;
+      --scan-opacity: 0;
+
+      --heading-shadow: none;
+
+      --field-bg: #ffffff;
+      --menu-bg: #ffffff;
+      --chip-bg: #eef0f8;
+      --scrim: rgba(26, 28, 46, 0.35);
+      --raised: rgba(20, 30, 60, 0.06);
     }
 
     * {
@@ -268,14 +330,58 @@
       padding: 12px 14px;
       min-width: 260px;
       border-radius: var(--radius);
-      background: rgba(7, 25, 35, 0.97);
-      border: 1px solid rgba(143, 187, 201, 0.18);
+      background: var(--menu-bg);
+      border: 1px solid var(--border);
       box-shadow: var(--surface-shadow);
       z-index: 20;
     }
     .topbar-dropdown-menu a {
       font-size: 0.82rem;
     }
+    /* Theme picker: chip trigger, checkable menu (STYLE-GUIDE §9). */
+    .theme-dd > summary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface-hover);
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+    .theme-dd > summary::after { content: none; }
+    .theme-dd > summary:hover { border-color: var(--accent); }
+    .theme-menu {
+      left: auto;
+      right: 0;
+      min-width: 150px;
+      grid-template-columns: 1fr;
+      gap: 2px;
+      padding: 6px;
+    }
+    .theme-menu button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      margin: 0;
+      padding: 7px 9px;
+      border: 0;
+      border-radius: var(--radius);
+      background: none;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-align: left;
+    }
+    .theme-menu button:hover { background: var(--surface-hover); color: var(--text); }
+    .theme-menu .chk { color: var(--accent); visibility: hidden; }
+    .theme-menu button[aria-checked="true"] { color: var(--text); }
+    .theme-menu button[aria-checked="true"] .chk { visibility: visible; }
     .topbar-meta {
       margin-left: auto;
       display: flex;
@@ -293,13 +399,13 @@
       line-height: 1;
       font-size: 0.8rem;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      background: var(--surface-hover);
       color: var(--text-muted);
       cursor: pointer;
     }
     .topbar-meta .is-icon:hover {
-      background: rgba(255, 255, 255, 0.09);
+      background: var(--raised);
       color: var(--text);
     }
     /* The panel hangs off the topbar now, so it opens downward from the right
@@ -316,13 +422,13 @@
       padding: 6px 12px;
       font-weight: 600;
       font-size: 0.8rem;
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--surface-hover);
       color: var(--text-muted);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--border);
       text-decoration: none;
     }
     .topbar-github:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--border);
       color: var(--text);
     }
 
@@ -361,8 +467,8 @@
       gap: 8px;
       padding: 8px 10px;
       border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--chip-bg);
+      border: 1px solid var(--border);
     }
     .layer-chips-label {
       font-size: 0.64rem;
@@ -391,8 +497,8 @@
       width: 250px;
       padding: 10px 12px;
       border-radius: var(--radius);
-      background: rgba(7, 25, 35, 0.97);
-      border: 1px solid rgba(143, 187, 201, 0.28);
+      background: var(--menu-bg);
+      border: 1px solid var(--border-strong);
       box-shadow: var(--surface-shadow);
     }
     .controls-card button {
@@ -407,8 +513,8 @@
     /* 3D View is a toggle, not a one-way "open" (#29): the same control
        enters and exits the mode, so it needs a visible pressed state. */
     .controls-card button[aria-pressed="true"] {
-      background: rgba(0, 184, 148, 0.16);
-      border-color: rgba(0, 184, 148, 0.55);
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
       color: var(--accent);
     }
     /* Share (#34): confirmation text and the manual-copy fallback both take
@@ -438,8 +544,8 @@
       margin-top: 4px;
       padding: 7px 9px;
       border-radius: var(--radius);
-      border: 1px solid rgba(0, 184, 148, 0.35);
-      background: rgba(5, 15, 22, 0.9);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      background: var(--field-bg);
       color: var(--text);
       font-family: var(--font-mono);
       font-size: 0.72rem;
@@ -508,13 +614,13 @@
       overflow-y: auto;
       padding: 12px 14px;
       border-radius: var(--radius-lg);
-      background: rgba(7, 25, 35, 0.97);
-      border: 1px solid rgba(143, 187, 201, 0.18);
+      background: var(--menu-bg);
+      border: 1px solid var(--border);
       box-shadow: var(--surface-shadow);
     }
     .whats-new-entry {
       padding: 8px 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid var(--border);
     }
     .whats-new-entry:first-child {
       border-top: none;
@@ -577,8 +683,8 @@
       gap: 3px;
       padding: 3px;
       border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.045);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--chip-bg);
+      border: 1px solid var(--border);
       margin-bottom: 14px;
     }
     /* Beats `.step-panel button` (0,1,1) on the accent fill and the margin. */
@@ -596,10 +702,10 @@
       box-shadow: none;
     }
     .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
-      background: rgba(0, 184, 148, 0.18);
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
       color: var(--text);
       font-weight: 600;
-      box-shadow: inset 0 0 0 1px rgba(0, 184, 148, 0.35);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
     }
     .step-panel .entry-tabs .entry-tab:hover {
       color: var(--text);
@@ -609,7 +715,7 @@
     /* The uncommon half of Step 1, closed until asked for (#133). */
     .hop2-details {
       margin-top: 14px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid var(--border);
       padding-top: 12px;
     }
     .hop2-details summary {
@@ -631,8 +737,8 @@
     .step-panel select.import-select {
       width: 100%;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(5, 15, 22, 0.9);
+      border: 1px solid var(--border);
+      background: var(--field-bg);
       color: var(--text);
       padding: 12px;
       font: inherit;
@@ -697,7 +803,7 @@
     .step-panel .sample {
       font-family: var(--font-mono);
       font-size: 0.92em;
-      background: rgba(255, 255, 255, 0.06);
+      background: var(--chip-bg);
       border-radius: 4px;
       padding: 1px 5px;
       color: var(--text-muted);
@@ -708,7 +814,7 @@
     .utility-panel a {
       color: var(--accent);
       text-underline-offset: 2px;
-      text-decoration-color: rgba(0, 184, 148, 0.45);
+      text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
     }
     .step-panel a:hover,
     .utility-panel a:hover {
@@ -856,8 +962,8 @@
     .prefix-panel input {
       width: 100%;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(5, 15, 22, 0.9);
+      border: 1px solid var(--border);
+      background: var(--field-bg);
       color: var(--text);
       padding: 12px;
       font: inherit;
@@ -890,8 +996,8 @@
     .workflow-step {
       padding: 10px 12px;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      background: var(--surface-hover);
       color: var(--text-muted);
       font-size: 0.84rem;
       line-height: 1.4;
@@ -905,13 +1011,13 @@
     }
 
     .workflow-step.is-active {
-      border-color: rgba(155, 229, 100, 0.35);
-      background: rgba(155, 229, 100, 0.1);
+      border-color: color-mix(in srgb, var(--success) 35%, transparent);
+      background: color-mix(in srgb, var(--success) 10%, transparent);
     }
 
     .workflow-step.is-done {
-      border-color: rgba(0, 184, 148, 0.32);
-      background: rgba(0, 184, 148, 0.12);
+      border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
     }
 
     .source-grid {
@@ -935,8 +1041,8 @@
     .utility-panel input {
       width: 100%;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(5, 15, 22, 0.9);
+      border: 1px solid var(--border);
+      background: var(--field-bg);
       color: var(--text);
       padding: 12px;
       font: inherit;
@@ -966,19 +1072,19 @@
       display: block;
       text-align: center;
       text-decoration: none;
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      border: 1px solid var(--raised);
       border-radius: var(--radius);
       padding: 9px 14px;
       font: inherit;
       font-weight: 600;
       color: var(--text);
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--chip-bg);
       cursor: pointer;
     }
     .utility-panel button:hover,
     .utility-panel .button-secondary:hover {
-      background: rgba(255, 255, 255, 0.10);
-      border-color: rgba(255, 255, 255, 0.26);
+      background: var(--raised);
+      border-color: var(--border-strong);
     }
 
     .button-row {
@@ -990,19 +1096,19 @@
 
     .button-secondary,
     .step-panel button.button-secondary {
-      background: rgba(255, 255, 255, 0.06);
+      background: var(--chip-bg);
       color: var(--text);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      border: 1px solid var(--raised);
     }
     .step-panel button.button-secondary:hover {
-      background: rgba(255, 255, 255, 0.10);
+      background: var(--raised);
     }
 
     .button-muted,
     .step-panel button.button-muted {
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--surface-hover);
       color: var(--text-muted);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--border);
     }
 
     /* Focus visibility + disabled states (accessibility polish). */
@@ -1029,7 +1135,7 @@
        was never applied by anything, so it is reused rather than a second mode
        concept being invented next to it. */
     .map-wrap.is-draw-mode {
-      outline: 2px solid rgba(155, 229, 100, 0.4);
+      outline: 2px solid color-mix(in srgb, var(--success) 40%, transparent);
     }
 
     .manual-banner {
@@ -1044,8 +1150,8 @@
       max-width: min(420px, calc(100% - 70px));
       padding: 6px 12px;
       border-radius: 999px;
-      background: rgba(7, 25, 35, 0.92);
-      border: 1px solid rgba(155, 229, 100, 0.5);
+      background: var(--menu-bg);
+      border: 1px solid color-mix(in srgb, var(--success) 50%, transparent);
       color: var(--text);
       font-size: 0.76rem;
       font-weight: 600;
@@ -1059,7 +1165,7 @@
     .manual-banner button {
       margin: 0;
       padding: 3px 9px;
-      border: 1px solid rgba(155, 229, 100, 0.6);
+      border: 1px solid color-mix(in srgb, var(--success) 60%, transparent);
       border-radius: 999px;
       background: transparent;
       color: var(--text);
@@ -1119,9 +1225,9 @@
       margin-top: 0;
       text-align: left;
       font-weight: 400;
-      background: rgba(7, 17, 24, 0.45);
+      background: var(--scrim);
       color: var(--text);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 10px 12px;
       cursor: pointer;
@@ -1131,7 +1237,7 @@
        which is near-invisible on a surface this dark. Hover lifts the card
        towards the panel rather than washing it white. */
     .step-panel .candidate-card:hover {
-      background: rgba(7, 17, 24, 0.30);
+      background: var(--surface-hover);
       border-color: rgba(255, 255, 255, 0.22);
       filter: none;
     }
@@ -1140,14 +1246,14 @@
        on. The inset bar carries the state on its own, so the tint never has to
        be strong enough to hurt the text sitting on it. */
     .step-panel .candidate-card.is-selected {
-      border-color: rgba(155, 229, 100, 0.55);
+      border-color: color-mix(in srgb, var(--success) 55%, transparent);
       /* Two layers, not two colours: the lime wash sits ON the same dark
          tint as a resting card, so selection changes the hue without
          giving back the contrast the dark tint bought. */
       background:
-        linear-gradient(rgba(155, 229, 100, 0.12), rgba(155, 229, 100, 0.12)),
-        rgba(7, 17, 24, 0.45);
-      box-shadow: inset 3px 0 0 rgba(155, 229, 100, 0.8);
+        linear-gradient(color-mix(in srgb, var(--success) 12%, transparent), color-mix(in srgb, var(--success) 12%, transparent)),
+        var(--scrim);
+      box-shadow: inset 3px 0 0 color-mix(in srgb, var(--success) 80%, transparent);
     }
 
     .step-panel .candidate-card strong,
@@ -1182,7 +1288,7 @@
       align-items: center;
       padding: 5px 8px;
       border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--surface-hover);
       border: 1px solid rgba(255, 255, 255, 0.07);
     }
 
@@ -1212,7 +1318,7 @@
 
     .observer-row.is-excluded {
       opacity: 0.65;
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--surface-hover);
     }
 
     .observer-row input[type="checkbox"] {
@@ -1272,7 +1378,7 @@
     }
     .observer-support {
       margin-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid var(--border);
       padding-top: 4px;
     }
     .observer-support > summary {
@@ -1293,8 +1399,8 @@
     .step-panel .observer-weight {
       width: 100%;
       border-radius: var(--radius);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(5, 15, 22, 0.9);
+      border: 1px solid var(--border);
+      background: var(--field-bg);
       color: var(--text);
       padding: 5px 6px;
       font: inherit;
@@ -1302,8 +1408,8 @@
     }
 
     .node-label {
-      background: rgba(7, 25, 35, 0.92);
-      border: 1px solid rgba(143, 187, 201, 0.26);
+      background: var(--menu-bg);
+      border: 1px solid var(--border-strong);
       color: var(--text);
       padding: 2px 6px;
       border-radius: 999px;
@@ -1346,7 +1452,7 @@
        specificity is what makes these survive the load order. Same trap as the
        candidate cards in #73, from the other direction. */
     .maplibregl-popup .maplibregl-popup-content {
-      background: rgba(7, 25, 35, 0.96);
+      background: var(--menu-bg);
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -1360,10 +1466,10 @@
        used depends on the popup's anchor. Setting all four means it matches
        whichever way MapLibre decides to point it. */
     .maplibregl-popup .maplibregl-popup-tip {
-      border-top-color: rgba(7, 25, 35, 0.96);
-      border-bottom-color: rgba(7, 25, 35, 0.96);
-      border-left-color: rgba(7, 25, 35, 0.96);
-      border-right-color: rgba(7, 25, 35, 0.96);
+      border-top-color: var(--menu-bg);
+      border-bottom-color: var(--menu-bg);
+      border-left-color: var(--menu-bg);
+      border-right-color: var(--menu-bg);
     }
 
     .maplibregl-popup .maplibregl-popup-close-button {
@@ -1419,7 +1525,7 @@
       cursor: pointer;
     }
     .link-remove-btn:hover {
-      background: rgba(225, 29, 72, 0.28);
+      background: color-mix(in srgb, var(--danger) 28%, transparent);
     }
 
     /* Deep-link auto-discovery splash (#26): a visitor arriving via a
@@ -1452,7 +1558,7 @@
       position: fixed;
       inset: 0;
       z-index: 5100;         /* above #loading-overlay (5000) */
-      background: rgba(7, 17, 24, 0.62);
+      background: var(--scrim);
       backdrop-filter: blur(3px);
       padding: 16px;
     }
@@ -1467,7 +1573,7 @@
       width: min(440px, 92vw);
       max-height: 85vh;
       border-radius: 20px;
-      background: rgba(7, 25, 35, 0.97);
+      background: var(--menu-bg);
       border: 1px solid var(--border);
       box-shadow: var(--surface-shadow);
     }
@@ -1509,7 +1615,7 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: rgba(0, 184, 148, 0.16);
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
       color: var(--accent);
       font-size: 0.7rem;
       font-weight: 600;
@@ -1532,7 +1638,7 @@
     .intro-sub {
       margin: 0 0 6px 29px;
       padding-left: 9px;
-      border-left: 2px solid rgba(0, 184, 148, 0.3);
+      border-left: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
     }
     .intro-sub p {
       margin: 0;
@@ -1593,8 +1699,8 @@
       width: min(260px, 80%);
       padding: 20px;
       border-radius: 20px;
-      background: rgba(7, 25, 35, 0.96);
-      border: 1px solid rgba(143, 187, 201, 0.18);
+      background: var(--menu-bg);
+      border: 1px solid var(--border);
       box-shadow: var(--surface-shadow);
       text-align: center;
     }
@@ -1603,7 +1709,7 @@
       height: 28px;
       margin: 0 auto 12px;
       border-radius: 50%;
-      border: 3px solid rgba(0, 184, 148, 0.2);
+      border: 3px solid color-mix(in srgb, var(--accent) 20%, transparent);
       border-top-color: var(--accent);
       animation: deep-link-spin 0.8s linear infinite;
     }
@@ -1815,6 +1921,14 @@
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
     <div class="topbar-meta">
+      <details class="topbar-dropdown theme-dd" id="theme-dropdown">
+        <summary id="theme-trigger" aria-label="Theme" title="Theme">🌙</summary>
+        <div class="topbar-dropdown-menu theme-menu" role="menu" aria-label="Theme">
+          <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">✓</span></button>
+          <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">✓</span></button>
+          <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">✓</span></button>
+        </div>
+      </details>
       <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
       <div class="whats-new">
         <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
@@ -6439,6 +6553,49 @@
       introLoading.hidden = true;
       if (introHint) introHint.hidden = false;
     }
+    // ── Theme (#139, STYLE-GUIDE §5) ────────────────────────────────────
+    // dark | light | system, persisted under the canonical meshcore-theme key
+    // so the choice carries across the DMC subdomains. The pre-paint script in
+    // <head> applies it before first paint; this keeps it in step afterwards.
+    const THEME_KEY = "meshcore-theme";
+    const themeDropdown = document.getElementById("theme-dropdown");
+    const themeTrigger = document.getElementById("theme-trigger");
+    const systemLight = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+
+    function storedTheme() {
+      try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; }
+    }
+
+    function applyTheme(choice) {
+      const light = choice === "light" || (choice === "system" && systemLight && systemLight.matches);
+      if (light) document.documentElement.setAttribute("data-theme", "light");
+      else document.documentElement.removeAttribute("data-theme");
+      if (themeTrigger) themeTrigger.textContent = light ? "☀️" : "🌙";
+      document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+        button.setAttribute("aria-checked", button.dataset.themeChoice === choice ? "true" : "false");
+      });
+      // The map's own controls and labels are painted by MapLibre, not CSS.
+      refresh3dData();
+    }
+
+    document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const choice = button.dataset.themeChoice;
+        try { localStorage.setItem(THEME_KEY, choice); } catch (e) { /* private mode */ }
+        applyTheme(choice);
+        if (themeDropdown) themeDropdown.open = false;
+      });
+    });
+
+    // Following the system means following it as it changes.
+    if (systemLight && systemLight.addEventListener) {
+      systemLight.addEventListener("change", () => {
+        if (storedTheme() === "system") applyTheme("system");
+      });
+    }
+
+    applyTheme(storedTheme());
+
     if (introOpenButton) introOpenButton.addEventListener("click", () => openIntro(false));
     if (introDismiss) introDismiss.addEventListener("click", closeIntro);
     if (introOverlay) {
