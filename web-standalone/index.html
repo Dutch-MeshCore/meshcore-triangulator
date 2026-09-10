@@ -113,6 +113,12 @@
       --chip-bg: rgba(255, 255, 255, 0.05);
       --scrim: rgba(3, 4, 6, 0.62);
       --raised: rgba(255, 255, 255, 0.10);
+      /* Shared product bar (STYLE-GUIDE §9, #142). */
+      --bar-h: 34px;
+      --bar-bg: rgba(3, 4, 6, 0.74);
+      --glass-bg: rgba(18, 21, 28, 0.88);
+      /* Measured from the rendered navbar; the fallback is its one-row height. */
+      --nav-h: 53px;
 
       /* Type. */
       --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
@@ -123,6 +129,10 @@
       --fs-md: 14px;
       --fs-lg: 16px;
       --fs-xl: 18px;
+
+      /* The tricolour band every DMC surface opens with (STYLE-GUIDE §9).
+         Theme-constant: it is the brand, not the palette. */
+      --stripe-h: 4px;
 
       /* Geometry: one base radius for controls, one for large surfaces. */
       --radius: 8px;
@@ -170,6 +180,8 @@
       --chip-bg: #eef0f8;
       --scrim: rgba(26, 28, 46, 0.35);
       --raised: rgba(20, 30, 60, 0.06);
+      --bar-bg: rgba(255, 255, 255, 0.82);
+      --glass-bg: rgba(255, 255, 255, 0.94);
     }
 
     * {
@@ -228,11 +240,6 @@
        down over the map strip, and at equal z-index the later element in the
        document wins — so the strip's buttons cut straight through the theme
        and What's new panels. */
-    .topbar {
-      position: relative;
-      z-index: 2;
-    }
-
     /* Headings and the brand run in the display face, uppercased, with a hard
        drop shadow that light mode drops (STYLE-GUIDE §3). */
     h1, h2, h3,
@@ -253,7 +260,10 @@
        accent stripe, not a repaint) so it still reads as "this page, but
        tied to the wider community". */
     .topbar {
-      position: relative;
+      /* Sticks beneath the family band, which owns top: 0 (#142). */
+      position: sticky;
+      top: var(--bar-h);
+      z-index: 2;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -265,6 +275,188 @@
       background: var(--surface-2);
       border: 1px solid var(--border);
     }
+    /* ── Shared product bar (STYLE-GUIDE §9, #142) ──────────────────────
+       One thin band above the app navbar, the same on every DMC subdomain,
+       carrying the family brand, the app switcher, and the language and theme
+       pickers. Vendored from style-guide.html until the shared file has
+       somewhere to be served from — that is still an open decision in the
+       guide. Token names are this app's canonical ones (--text-muted,
+       --surface-hover) where the reference uses the website's. */
+    .dmc-bar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      height: var(--bar-h);
+      background: var(--bar-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .dmc-bar-inner {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dmc-bar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      margin-right: auto;
+    }
+    .dmc-bar-logo {
+      width: 20px;
+      height: 20px;
+      display: block;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+    }
+    .dmc-bar-name {
+      font-family: var(--font-head);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.68rem;
+      line-height: 1;
+      color: var(--heading);
+      text-shadow: var(--heading-shadow);
+    }
+
+    /* The dropdown pattern the band's three controls share. */
+    .dd { position: relative; }
+    .dmc-bar .dd-trig {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      line-height: 1;
+      color: var(--text-muted);
+      background: var(--chip-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      margin: 0;
+    }
+    .dmc-bar .dd-trig:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+    .dmc-bar .dd-trig svg { width: 11px; height: 11px; fill: currentColor; }
+    .dd-caret { font-size: 0.65rem; opacity: 0.7; }
+    .dd-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      display: none;
+      min-width: 168px;
+      padding: 6px;
+      background: var(--menu-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--surface-shadow);
+      z-index: 40;
+    }
+    .dd.open .dd-menu { display: block; }
+    .dmc-bar .dd-menu button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      border: 0;
+      background: none;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      margin: 0;
+    }
+    .dmc-bar .dd-menu button:hover { background: var(--surface-hover); }
+    .dd-menu .dd-ico { width: 20px; text-align: center; }
+    .dd-menu .chk { margin-left: auto; color: var(--accent); visibility: hidden; }
+    .dd-menu button[aria-checked="true"] .chk { visibility: visible; }
+
+    /* App switcher: a glass sheet of monogram tiles. */
+    .dmc-apps .dd-menu {
+      width: 372px;
+      padding: 10px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .dmc-apps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+    .dmc-app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 6px 8px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--text);
+      text-align: center;
+    }
+    .dmc-app:hover { background: var(--surface-hover); }
+    .dmc-app[aria-current="page"] {
+      background: var(--surface-hover);
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+    .dmc-app-ico {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--chip-bg);
+      font-family: var(--font-head);
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      color: var(--accent-light);
+    }
+    .dmc-app-ico img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dmc-app-name { font-size: 0.76rem; font-weight: 600; line-height: 1.1; }
+    .dmc-app-host { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-faint); }
+    .dmc-apps-foot {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.74rem;
+    }
+    .dmc-apps-foot a { color: var(--link); text-decoration: none; }
+    .dmc-apps-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .dmc-bar-name { display: none; }
+      .dmc-bar .dd-trig .dd-txt { display: none; }
+      .dmc-apps .dd-menu {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        top: calc(var(--bar-h) + 6px);
+        width: auto;
+        background: var(--menu-bg);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+      .dmc-apps-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* Every DMC surface opens with this band (STYLE-GUIDE §9): full width, in
        normal flow, above the navbar. It was a 4px vertical bar beside the
        topbar, which is the same idea in the wrong orientation. */
@@ -313,82 +505,6 @@
     .topbar-nav a:hover {
       color: var(--text);
     }
-    .topbar-dropdown {
-      position: relative;
-    }
-    .topbar-dropdown summary {
-      cursor: pointer;
-      color: var(--text);
-      list-style: none;
-    }
-    .topbar-dropdown summary::-webkit-details-marker {
-      display: none;
-    }
-    .topbar-dropdown summary::after {
-      content: " \25BE";
-    }
-    .topbar-dropdown-menu {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 16px;
-      padding: 12px 14px;
-      min-width: 260px;
-      border-radius: var(--radius);
-      background: var(--menu-bg);
-      border: 1px solid var(--border);
-      box-shadow: var(--surface-shadow);
-      z-index: 20;
-    }
-    .topbar-dropdown-menu a {
-      font-size: 0.82rem;
-    }
-    /* Theme picker: chip trigger, checkable menu (STYLE-GUIDE §9). */
-    .theme-dd > summary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 9px;
-      border: 1px solid var(--border);
-      background: var(--surface-hover);
-      font-size: 0.8rem;
-      line-height: 1;
-    }
-    .theme-dd > summary::after { content: none; }
-    .theme-dd > summary:hover { border-color: var(--accent); }
-    .theme-menu {
-      left: auto;
-      right: 0;
-      min-width: 150px;
-      grid-template-columns: 1fr;
-      gap: 2px;
-      padding: 6px;
-    }
-    .theme-menu button {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      width: 100%;
-      margin: 0;
-      padding: 7px 9px;
-      border: 0;
-      border-radius: var(--radius);
-      background: none;
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 0.82rem;
-      cursor: pointer;
-      text-align: left;
-    }
-    .theme-menu button:hover { background: var(--surface-hover); color: var(--text); }
-    .theme-menu .chk { color: var(--accent); visibility: hidden; }
-    .theme-menu button[aria-checked="true"] { color: var(--text); }
-    .theme-menu button[aria-checked="true"] .chk { visibility: visible; }
     .topbar-meta {
       margin-left: auto;
       display: flex;
@@ -445,8 +561,11 @@
       display: grid;
       grid-template-columns: 300px 1fr;
       gap: 18px;
-      /* Don't stretch the map row to match the (tall) left column. */
-      align-items: start;
+      /* The map column DOES stretch to the left column's height, which is what
+         gives the sticky map room to stay put for the whole scroll. The map
+         keeps its own viewport-sized height, so stretching the column does not
+         stretch the map (#142). */
+      align-items: stretch;
     }
 
     .map-wrap {
@@ -1433,10 +1552,12 @@
 
     .map-wrap {
       padding: 10px;
-      /* Fixed, viewport-sized map that stays put while the left column scrolls. */
+      /* Viewport-sized map that stays put while the left column scrolls, resting
+         just below the two sticky bars above it. --nav-h is measured, because
+         the navbar wraps to two rows at some widths (#142). */
       position: sticky;
-      top: 84px;
-      height: calc(100vh - 108px);
+      top: calc(var(--bar-h) + var(--nav-h) + 10px);
+      height: calc(100vh - var(--bar-h) - var(--nav-h) - 34px);
     }
 
     #map3d {
@@ -1906,36 +2027,72 @@
     </div>
   </div>
   <div class="page-stripe" aria-hidden="true"></div>
+  <!-- The family band (#142). Cross-subdomain links, language and theme live
+       here and nowhere else; the navbar below keeps only what is this app's. -->
+  <div class="dmc-bar">
+    <div class="dmc-bar-inner">
+      <a class="dmc-bar-brand" href="https://dutchmeshcore.nl/">
+        <img class="dmc-bar-logo" src="assets/logo/dmc-logo.jpg" alt="">
+        <span class="dmc-bar-name">Dutch MeshCore</span>
+      </a>
+      <div class="dd dmc-apps" id="apps-dd">
+        <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Apps">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.25"/><circle cx="6" cy="1.5" r="1.25"/><circle cx="10.5" cy="1.5" r="1.25"/><circle cx="1.5" cy="6" r="1.25"/><circle cx="6" cy="6" r="1.25"/><circle cx="10.5" cy="6" r="1.25"/><circle cx="1.5" cy="10.5" r="1.25"/><circle cx="6" cy="10.5" r="1.25"/><circle cx="10.5" cy="10.5" r="1.25"/></svg><span class="dd-txt">Apps</span><span class="dd-caret">&#9662;</span>
+        </button>
+        <div class="dd-menu" role="menu">
+          <div class="dmc-apps-grid">
+            <a class="dmc-app" href="https://dutchmeshcore.nl/"><span class="dmc-app-ico"><img src="assets/logo/dmc-logo.jpg" alt=""></span><span class="dmc-app-name">Community</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
+            <a class="dmc-app" href="https://toolbox.dutchmeshcore.nl/"><span class="dmc-app-ico">TB</span><span class="dmc-app-name">Toolbox</span><span class="dmc-app-host">toolbox</span></a>
+            <a class="dmc-app" href="https://observers.dutchmeshcore.nl/"><span class="dmc-app-ico">OB</span><span class="dmc-app-name">Observers</span><span class="dmc-app-host">observers</span></a>
+            <a class="dmc-app" href="https://triangulator.dutchmeshcore.nl/" aria-current="page"><span class="dmc-app-ico">TR</span><span class="dmc-app-name">Triangulator</span><span class="dmc-app-host">triangulator</span></a>
+            <a class="dmc-app" href="https://settings.dutchmeshcore.nl/"><span class="dmc-app-ico">ST</span><span class="dmc-app-name">Settings</span><span class="dmc-app-host">settings</span></a>
+            <a class="dmc-app" href="https://ota.dutchmeshcore.nl/"><span class="dmc-app-ico">OTA</span><span class="dmc-app-name">OTA</span><span class="dmc-app-host">ota</span></a>
+            <a class="dmc-app" href="https://portal.dutchmeshcore.nl/"><span class="dmc-app-ico">PT</span><span class="dmc-app-name">Portal</span><span class="dmc-app-host">portal</span></a>
+            <a class="dmc-app" href="https://dutchmeshcore.nl/firmware.html"><span class="dmc-app-ico">FW</span><span class="dmc-app-name">Firmware</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
+          </div>
+          <div class="dmc-apps-foot">
+            <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord &#8599;</a>
+            <a href="https://github.com/Dutch-MeshCore" target="_blank" rel="noopener">GitHub &#8599;</a>
+          </div>
+        </div>
+      </div>
+      <!-- English-only for now, but the band is meant to be the same control
+           set on every subdomain, so the picker is here rather than this
+           being the one app whose band is a control short (#142). -->
+      <div class="dd" id="lang-dd">
+        <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+          <span id="lang-label">EN</span><span class="dd-caret">&#9662;</span>
+        </button>
+        <div class="dd-menu" role="menu">
+          <button type="button" role="menuitemradio" data-lang-opt="en" aria-checked="true">
+            <span class="dd-ico">&#127468;&#127463;</span> English <span class="chk">&#10003;</span>
+          </button>
+        </div>
+      </div>
+      <div class="dd" id="theme-dd">
+        <button class="dd-trig" type="button" id="theme-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Theme">
+          <span id="theme-icon">&#127769;</span><span class="dd-caret">&#9662;</span>
+        </button>
+        <div class="dd-menu" role="menu">
+          <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">&#10003;</span></button>
+          <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">&#10003;</span></button>
+          <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">&#10003;</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="topbar">
     <div class="topbar-brand">
       <span class="topbar-mark">DMC</span>
       <span class="topbar-title">MeshCore Triangulator</span>
     </div>
     <nav class="topbar-nav">
-      <details class="topbar-dropdown">
-        <summary>Dutch MeshCore</summary>
-        <div class="topbar-dropdown-menu">
-          <a href="https://dutchmeshcore.nl/#home" target="_blank" rel="noopener">Home</a>
-          <a href="https://dutchmeshcore.nl/#cluster" target="_blank" rel="noopener">MQTT Cluster</a>
-          <a href="https://portal.dutchmeshcore.nl" target="_blank" rel="noopener">Portal</a>
-          <a href="https://toolbox.dutchmeshcore.nl/" target="_blank" rel="noopener">Toolbox</a>
-          <a href="https://observers.dutchmeshcore.nl/" target="_blank" rel="noopener">Observer Stats</a>
-          <a href="https://settings.dutchmeshcore.nl/" target="_blank" rel="noopener">NL Mesh Settings</a>
-          <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord</a>
-        </div>
-      </details>
+      <!-- Not DMC subdomains, so not in the switcher — and MC-Radar is this
+           app's data source, so both belong to the app (#142). -->
       <a href="https://mesh-hunter.eu/" target="_blank" rel="noopener">Mesh-Hunter ↗</a>
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
     <div class="topbar-meta">
-      <details class="topbar-dropdown theme-dd" id="theme-dropdown">
-        <summary id="theme-trigger" aria-label="Theme" title="Theme">🌙</summary>
-        <div class="topbar-dropdown-menu theme-menu" role="menu" aria-label="Theme">
-          <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">✓</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">✓</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">✓</span></button>
-        </div>
-      </details>
       <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
       <div class="whats-new">
         <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
@@ -6614,9 +6771,54 @@
     // so the choice carries across the DMC subdomains. The pre-paint script in
     // <head> applies it before first paint; this keeps it in step afterwards.
     const THEME_KEY = "meshcore-theme";
-    const themeDropdown = document.getElementById("theme-dropdown");
-    const themeTrigger = document.getElementById("theme-trigger");
+    const themeIcon = document.getElementById("theme-icon");
     const systemLight = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+
+    // The navbar wraps to two rows at some widths, and the sticky map rests
+    // beneath it, so its height is measured rather than assumed (#142).
+    const topbarEl = document.querySelector(".topbar");
+    function syncNavHeight() {
+      if (!topbarEl) return;
+      const h = Math.round(topbarEl.getBoundingClientRect().height);
+      if (h) document.documentElement.style.setProperty("--nav-h", `${h}px`);
+    }
+    if (topbarEl && window.ResizeObserver) {
+      new ResizeObserver(syncNavHeight).observe(topbarEl);
+    }
+    window.addEventListener("resize", syncNavHeight);
+    syncNavHeight();
+
+    // ── The band's dropdowns (#142, STYLE-GUIDE §9) ─────────────────────
+    // One behaviour for all three: a trigger toggles, opening one closes the
+    // others, and an outside click or Escape closes whatever is open.
+    function closeBandDropdowns(except) {
+      document.querySelectorAll(".dmc-bar .dd.open").forEach((dd) => {
+        if (dd === except) return;
+        dd.classList.remove("open");
+        const trigger = dd.querySelector(".dd-trig");
+        if (trigger) trigger.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    document.querySelectorAll(".dmc-bar .dd").forEach((dd) => {
+      const trigger = dd.querySelector(".dd-trig");
+      if (!trigger) return;
+      trigger.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const opening = !dd.classList.contains("open");
+        closeBandDropdowns(dd);
+        dd.classList.toggle("open", opening);
+        trigger.setAttribute("aria-expanded", opening ? "true" : "false");
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".dmc-bar .dd")) return;
+      closeBandDropdowns();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeBandDropdowns();
+    });
 
     function storedTheme() {
       try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; }
@@ -6626,7 +6828,7 @@
       const light = choice === "light" || (choice === "system" && systemLight && systemLight.matches);
       if (light) document.documentElement.setAttribute("data-theme", "light");
       else document.documentElement.removeAttribute("data-theme");
-      if (themeTrigger) themeTrigger.textContent = light ? "☀️" : "🌙";
+      if (themeIcon) themeIcon.textContent = light ? "☀️" : "🌙";
       document.querySelectorAll("[data-theme-choice]").forEach((button) => {
         button.setAttribute("aria-checked", button.dataset.themeChoice === choice ? "true" : "false");
       });
@@ -6639,7 +6841,7 @@
         const choice = button.dataset.themeChoice;
         try { localStorage.setItem(THEME_KEY, choice); } catch (e) { /* private mode */ }
         applyTheme(choice);
-        if (themeDropdown) themeDropdown.open = false;
+        closeBandDropdowns();
       });
     });
 
