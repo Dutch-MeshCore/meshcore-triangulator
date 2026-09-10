@@ -374,31 +374,64 @@
        three controls on one row left the list unreadable. */
     /* Spam-detector import folded under one line (#117): the first-hop
        field is what a first visit needs, the import is the shortcut. */
-    .import-details {
-      margin-bottom: 12px;
+    /* Two ways into Step 1, as a segmented control (#133). */
+    .entry-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
     }
-    .import-details summary {
-      cursor: pointer;
+    /* Beats `.step-panel button` (0,1,1) on the accent fill and the margin. */
+    .step-panel .entry-tabs .entry-tab {
+      margin: 0;
+      border: 0;
+      border-radius: 9px;
+      padding: 7px 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      background: transparent;
+      /* --faint is for text that recedes under a label; a tab is a control you
+         have to be able to read and click. */
       color: var(--muted);
-      font-size: 0.84rem;
-      padding: 8px 0;
+      box-shadow: none;
+    }
+    .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
+      background: rgba(0, 184, 148, 0.18);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px rgba(0, 184, 148, 0.35);
+    }
+    .step-panel .entry-tabs .entry-tab:hover {
+      color: var(--text);
+      filter: none;
+    }
+
+    /* The uncommon half of Step 1, closed until asked for (#133). */
+    .hop2-details {
+      margin-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 12px;
+    }
+    .hop2-details summary {
+      cursor: pointer;
       list-style: none;
+      color: var(--muted);
+      font-size: 0.8rem;
     }
-    .import-details summary::-webkit-details-marker {
-      display: none;
+    .hop2-details summary::-webkit-details-marker { display: none; }
+    .hop2-details summary::before {
+      content: "+ ";
+      color: var(--accent);
+      font-weight: 600;
     }
-    .import-details summary::before {
-      content: "▸";
-      display: inline-block;
-      width: 1em;
-      transition: transform 0.15s ease;
-    }
-    .import-details[open] summary::before {
-      transform: rotate(90deg);
-    }
-    .import-details[open] summary {
-      margin-bottom: 8px;
-    }
+    .hop2-details[open] summary::before { content: "– "; }
+    .hop2-details[open] summary { margin-bottom: 12px; }
+    .hop2-details summary:hover { color: var(--text); }
+
     .step-panel select.import-select {
       width: 100%;
       border-radius: 12px;
@@ -1512,39 +1545,62 @@
           <span class="step-kicker">Step 1</span>
           <h3>Clues + Regions</h3>
           <div class="step-body">
-            <details id="import-details" class="import-details">
-              <summary>Load a spam-detector incident instead</summary>
+            <!-- Two equal ways to start (#133): you know the prefixes, or you
+                 have an incident. The importer used to be a <details> above the
+                 main field, so the exception route opened the panel. -->
+            <div class="entry-tabs" role="group" aria-label="How to start">
+              <button id="entry-tab-prefixes" type="button" class="entry-tab" aria-pressed="true">Prefixes</button>
+              <button id="entry-tab-incident" type="button" class="entry-tab" aria-pressed="false">Spam incident</button>
+            </div>
+
+            <div id="entry-pane-incident" class="entry-pane" hidden>
+              <label for="incident-select">Recent incidents</label>
               <select id="incident-select" class="import-select" aria-label="Recent incidents on mc-spamdetector.nl">
                 <option value="">Recent incidents…</option>
               </select>
+              <p class="field-help">
+                From <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>.
+                Its entry hops become your first-hop prefixes, weighted by how many packets each relayed.
+              </p>
+              <label for="incident-input">Or paste an attack URL or number</label>
               <div class="import-row">
-                <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
+                <input id="incident-input" type="text" value="" placeholder="2047" aria-label="Attack URL or number">
                 <button id="incident-load-button" type="button" class="button-secondary">Load</button>
               </div>
-              <p class="field-help">
-                Entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>
-                become the first-hop prefixes, weighted by packets; then it finds the region.
-              </p>
               <p id="incident-status" class="hint"></p>
-            </details>
-            <label for="prefix-input">First-hop prefixes</label>
-            <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
-            <p class="field-help">
-              Repeaters that heard the source directly. <span class="sample">2C</span> or
-              <span class="sample">2C:4</span>, comma separated — 2, 4 or 6 hex, and the number is
-              how often it was heard.
-            </p>
-            <p id="prefix-status" class="hint"></p>
-            <label for="prefix2-input">Second-hop prefixes <span class="label-optional">optional</span></label>
-            <input id="prefix2-input" type="text" value="" placeholder="a0:8, fc">
-            <p class="field-help">Heard a first-hop relay instead. Weaker and wider, so it counts for less.</p>
-            <div class="radius-row">
-              <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
-              <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
             </div>
-            <button id="discover-button" type="button">Find Best Matching Region</button>
-            <p class="field-help">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
-            <p id="discover-status" class="hint"></p>
+
+            <div id="entry-pane-prefixes" class="entry-pane">
+              <label for="prefix-input">First-hop prefixes</label>
+              <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
+              <p class="field-help">
+                Repeaters that heard the source directly. <span class="sample">2C</span> or
+                <span class="sample">2C:4</span>, comma separated — 2, 4 or 6 hex, and the number is
+                how often it was heard.
+              </p>
+              <p id="prefix-status" class="hint"></p>
+
+              <!-- Closed by default: a run is first-hop only most of the time,
+                   and 2nd-hop km governs nothing else, so it travels with the
+                   field it belongs to (#133). Opened on demand, and opened for
+                   you when a shared link actually carries second-hop clues. -->
+              <details id="hop2-details" class="hop2-details">
+                <summary>Add second-hop prefixes</summary>
+                <label for="prefix2-input">Second-hop prefixes</label>
+                <input id="prefix2-input" type="text" value="" placeholder="a0:8, fc">
+                <p class="field-help">Heard a first-hop relay instead. Weaker and wider, so it counts for less.</p>
+                <div class="radius-row">
+                  <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
+                </div>
+              </details>
+
+              <div class="radius-row">
+                <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
+              </div>
+              <button id="discover-button" type="button">Find Best Matching Region</button>
+              <p class="field-help">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
+              <p id="discover-status" class="hint"></p>
+            </div>
           </div>
         </section>
         <section class="step-panel is-locked" id="panel-cluster">
@@ -5725,6 +5781,32 @@
     // side fills the field and runs discovery, as the `prefixes` deep link
     // does. Second-hop stays empty on purpose: it is a weaker clue the
     // operator rarely enters, and the estimate does not score it (#46).
+    // Which way into Step 1 is showing (#133). Loading an incident switches
+    // back to Prefixes with the values filled in, so nothing arrives invisibly.
+    const entryTabPrefixes = document.getElementById("entry-tab-prefixes");
+    const entryTabIncident = document.getElementById("entry-tab-incident");
+    const entryPanePrefixes = document.getElementById("entry-pane-prefixes");
+    const entryPaneIncident = document.getElementById("entry-pane-incident");
+    const hop2Details = document.getElementById("hop2-details");
+
+    function showEntry(which) {
+      const incident = which === "incident";
+      if (entryTabPrefixes) entryTabPrefixes.setAttribute("aria-pressed", incident ? "false" : "true");
+      if (entryTabIncident) entryTabIncident.setAttribute("aria-pressed", incident ? "true" : "false");
+      if (entryPanePrefixes) entryPanePrefixes.hidden = incident;
+      if (entryPaneIncident) entryPaneIncident.hidden = !incident;
+    }
+
+    if (entryTabPrefixes) entryTabPrefixes.addEventListener("click", () => showEntry("prefixes"));
+    if (entryTabIncident) entryTabIncident.addEventListener("click", () => showEntry("incident"));
+
+    // A shared scene must never hide part of itself, so second-hop clues open
+    // the disclosure that holds them.
+    function revealHop2IfUsed() {
+      if (!hop2Details || !prefix2Input) return;
+      if (prefix2Input.value.trim()) hop2Details.open = true;
+    }
+
     const incidentSelect = document.getElementById("incident-select");
     const incidentInput = document.getElementById("incident-input");
     const incidentLoadButton = document.getElementById("incident-load-button");
@@ -5772,8 +5854,7 @@
         return;
       }
       if (incidentStatus) incidentStatus.textContent = `Loading incident #${id} from the spam detector...`;
-      const importDetails = document.getElementById("import-details");
-      if (importDetails) importDetails.open = true;
+      showEntry("incident");
       if (incidentLoadButton) incidentLoadButton.disabled = true;
       try {
         const response = await fetch(`/proxy/spamdetector/incident/${id}`);
@@ -5785,9 +5866,12 @@
         if (incidentSelect) incidentSelect.value = [...incidentSelect.options].some((o) => o.value === id) ? id : "";
         applyPrefixInput();
         const count = data.hops.length;
-        if (incidentStatus) {
-          incidentStatus.textContent = `Incident #${id}: ${count} entry hop${count === 1 ? "" : "s"} loaded as first-hop prefixes, weighted by packets. Second-hop left empty.`;
-        }
+        showEntry("prefixes");
+        if (incidentStatus) incidentStatus.textContent = "";
+        // applyPrefixInput() has just written "Parsed observers: ..." here;
+        // where they came from is the more useful thing to say until the
+        // operator edits them.
+        prefixStatus.textContent = `From incident #${id}: ${count} entry hop${count === 1 ? "" : "s"}, weighted by packets. Second-hop left empty.`;
         await runCaseDiscovery();
       } catch (error) {
         if (incidentStatus) incidentStatus.textContent = `Incident #${id} did not load: ${error.message}`;
@@ -5852,7 +5936,10 @@
       }
       prefixInput.value = prefixes;
       const prefixes2 = params.get("prefixes2");
-      if (prefixes2 && prefix2Input) prefix2Input.value = prefixes2;
+      if (prefixes2 && prefix2Input) {
+        prefix2Input.value = prefixes2;
+        revealHop2IfUsed();
+      }
       const hop2 = Number.parseFloat(params.get("hop2"));
       if (Number.isFinite(hop2) && hop2 > 0 && hop2RadiusInput) hop2RadiusInput.value = String(hop2);
       const cluster = Number.parseFloat(params.get("cluster"));

@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-two-ways-into-step-1",
+    "date": "2026-09-10",
+    "title": "Two ways to start, and second-hop out of the way",
+    "body": "Loading a spam-detector incident was tucked into a fold above the prefix field, so the exception route opened the panel. It is now one of two buttons at the top of Step 1: type prefixes, or pick an incident. Loading one fills the prefix field and switches you back to it, with a line saying which incident the values came from, so you can still change them before searching. The second-hop field folds away until you ask for it, together with its own km setting, because most searches never use it. A shared link that carries second-hop prefixes opens that fold for you."
+  },
+  {
     "id": "2026-09-10-step-1-reads-properly",
     "date": "2026-09-10",
     "title": "Step 1 stops reading as one grey block",
