@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-map-controls-with-the-map",
+    "date": "2026-09-10",
+    "title": "The map's buttons sit with the map",
+    "body": "Clear Map, the layer switches and the relief slider lived at the bottom of the left column, below all three steps — nearly a thousand pixels under the map they act on, so turning off a layer meant scrolling the map out of sight. They are now a strip along the top of the map. Relief became a button that opens its slider, so the strip stays one line. The help and What's new buttons moved up to the bar at the top of the page. Every step can now be folded shut and shows what it holds when it is (Step 1 · 8 prefixes), and on a phone the observer list folds itself once you have an estimate, so the map is no longer three screens down."
+  },
+  {
     "id": "2026-09-10-shorter-observer-list",
     "date": "2026-09-10",
     "title": "The observer list says what you are choosing on",

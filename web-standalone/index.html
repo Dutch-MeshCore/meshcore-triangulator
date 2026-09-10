@@ -144,8 +144,41 @@
     .topbar-dropdown-menu a {
       font-size: 0.82rem;
     }
-    .topbar-github {
+    .topbar-meta {
       margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .topbar-meta .is-icon {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-size: 0.8rem;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .topbar-meta .is-icon:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text);
+    }
+    /* The panel hangs off the topbar now, so it opens downward from the right
+       edge rather than from a card in the column. */
+    .topbar-meta .whats-new-panel {
+      top: calc(100% + 10px);
+      left: auto;
+      right: 0;
+    }
+
+    .topbar-github {
       flex: 0 0 auto;
       border-radius: 10px;
       padding: 6px 12px;
@@ -194,10 +227,41 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-radius: 14px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .layer-chips-label {
+      font-size: 0.64rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-right: 2px;
+    }
+    /* Share is the one control here that is not about the map, so it sits at
+       the far end rather than in the run of map buttons. */
+    .controls-card .controls-meta {
+      margin-left: auto;
+    }
+
+    /* Relief is a slider with a paragraph of explanation; as a chip plus a
+       popover the strip stays one line (#135). */
+    .relief-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .relief-wrap .terrain-control {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 20;
+      width: 250px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(7, 25, 35, 0.97);
+      border: 1px solid rgba(143, 187, 201, 0.28);
+      box-shadow: var(--shadow);
     }
     .controls-card button {
       margin: 0;
@@ -564,13 +628,69 @@
       pointer-events: none;
     }
 
+    /* The head is the control that folds the panel (#135). Step 1 already
+       collapsed on its own when a cluster locked, but there was no way to open
+       it again and nothing said what it held. */
+    /* `.step-panel button` (0,1,1) paints every button in the panel with the
+       accent fill, so the head has to outspecify it or it renders as a big
+       green primary action. */
+    .step-panel .step-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "kicker chevron"
+        "title  chevron";
+      align-items: center;
+      gap: 0 10px;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+    .step-panel .step-head .step-kicker { grid-area: kicker; }
+    .step-panel .step-head h3 { grid-area: title; }
+    .step-panel .step-head .step-chev {
+      grid-area: chevron;
+      color: var(--faint);
+      font-size: 0.7rem;
+      transition: transform 0.15s ease;
+    }
+    .step-panel .step-head .step-chev::before { content: "▾"; }
+    @media (prefers-reduced-motion: reduce) {
+      .step-panel .step-head .step-chev { transition: none; }
+    }
+    .step-panel .step-head:hover .step-chev { color: var(--text); }
+    /* The summary only earns its place once the panel is folded; open, the
+       panel itself is the summary. */
+    .step-summary {
+      grid-area: title;
+      justify-self: end;
+      align-self: center;
+      font-size: 0.74rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      display: none;
+    }
+
     .step-panel.is-collapsed .step-body {
       display: none;
     }
+    .step-panel.is-collapsed .step-chev { transform: rotate(-90deg); }
+    .step-panel.is-collapsed .step-summary:not(:empty) { display: block; }
+    .step-panel.is-collapsed h3 { margin-bottom: 0; }
 
     .step-panel.is-collapsed {
       padding-bottom: 12px;
     }
+    /* Nothing to fold before a step is reachable. */
+    .step-panel.is-locked .step-head { cursor: default; }
+    .step-panel.is-locked .step-chev { visibility: hidden; }
 
     .step-kicker {
       display: inline-block;
@@ -1379,17 +1499,6 @@
        It lives in the controls card next to the 3D toggle rather than floating
        over the map. It is a setting for that view, so it belongs with the
        control that opens it, and the map is for the map. */
-    .terrain-control {
-      /* The controls card is flex-wrap; this is how its other full-width rows
-         claim a line of their own (see .share-status). */
-      flex: 1 0 100%;
-      margin-top: 2px;
-      padding: 9px 11px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
     .terrain-control label {
       display: flex;
       justify-content: space-between;
@@ -1572,15 +1681,30 @@
       <a href="https://mesh-hunter.eu/" target="_blank" rel="noopener">Mesh-Hunter ↗</a>
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
-    <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
+    <div class="topbar-meta">
+      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
+      <div class="whats-new">
+        <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
+          <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
+        </button>
+        <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
+          <div id="whats-new-list"></div>
+        </div>
+      </div>
+      <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
   </div>
   <main class="shell">
     <section class="panel">
       <div class="input-stack">
         <section class="step-panel is-locked" id="panel-discovery">
-          <span class="step-kicker">Step 1</span>
-          <h3>Clues + Regions</h3>
-          <div class="step-body">
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-discovery">
+            <span class="step-kicker">Step 1</span>
+            <h3>Clues + Regions</h3>
+            <span class="step-summary" id="summary-discovery"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-discovery">
             <!-- Two equal ways to start (#133): you know the prefixes, or you
                  have an incident. The importer used to be a <details> above the
                  main field, so the exception route opened the panel. -->
@@ -1640,8 +1764,13 @@
           </div>
         </section>
         <section class="step-panel is-locked" id="panel-cluster">
-          <span class="step-kicker">Step 2</span>
-          <h3>Choose Cluster</h3>
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-cluster">
+            <span class="step-kicker">Step 2</span>
+            <h3>Choose Cluster</h3>
+            <span class="step-summary" id="summary-cluster"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-cluster">
           <div id="cluster-status" class="cluster-status">Candidate clusters will appear here after discovery.</div>
           <div id="candidate-list" class="candidate-list" hidden></div>
           <label for="cluster-add-prefix-input" id="cluster-add-prefix-label" hidden>Add repeater prefixes within this cluster</label>
@@ -1651,56 +1780,63 @@
           <button id="apply-cluster-weights-button" type="button" hidden>Apply Inside Locked Cluster</button>
           <p id="cluster-editor-status" hidden>Only resolved observers inside the locked cluster can be edited here.</p>
           <button id="change-cluster-button" type="button" class="button-secondary" hidden>Choose Another Cluster</button>
+          </div>
         </section>
         <section class="step-panel is-locked" id="panel-terrain">
-          <span class="step-kicker">Step 3</span>
-          <h3>Unknown Node Estimate</h3>
-          <button id="estimate-button" type="button" disabled>Estimate Unknown Node</button>
-          <button id="terrain-rescore-button" type="button" class="button-secondary" disabled>Refine with Terrain + LOS</button>
-          <p id="terrain-status">Run a weighted observer estimate first. Terrain and LOS are an optional refinement after that.</p>
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-terrain">
+            <span class="step-kicker">Step 3</span>
+            <h3>Unknown Node Estimate</h3>
+            <span class="step-summary" id="summary-terrain"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-terrain">
+            <button id="estimate-button" type="button" disabled>Estimate Unknown Node</button>
+            <button id="terrain-rescore-button" type="button" class="button-secondary" disabled>Refine with Terrain + LOS</button>
+            <p id="terrain-status">Run a weighted observer estimate first. Terrain and LOS are an optional refinement after that.</p>
+          </div>
         </section>
-        <div class="controls-card">
-          <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
-          <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
-          <button id="share-button" type="button" class="button-secondary">Share</button>
-          <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
-            <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
-            <button type="button" class="button-muted layer-chip" data-layer="links" aria-pressed="true">Links</button>
-            <button type="button" class="button-muted layer-chip" data-layer="heat" aria-pressed="true">Heat</button>
-          </div>
-          <div class="controls-meta">
-          <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
-          <div class="whats-new">
-            <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
-              <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
-            </button>
-            <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
-              <div id="whats-new-list"></div>
-            </div>
-          </div>
-          </div>
-          <!-- Full-width rows last: they wrap below the button row rather
-               than pushing the right-aligned bell onto a second line. -->
-          <div id="terrain-control" class="terrain-control" hidden>
-            <label for="terrain-exaggeration">
-              <span>Relief exaggeration</span>
-              <b id="terrain-exaggeration-value">6.0x</b>
-            </label>
-            <input id="terrain-exaggeration" type="range" min="1" max="12" step="0.5" value="6">
-            <p class="terrain-control-note">
-              A ~30 m global model, for looking at. Step 3 measures line of sight from AHN at 0.5 m.
-            </p>
-          </div>
-          <p id="share-status" class="share-status" role="status" hidden></p>
-          <label id="share-fallback" class="share-fallback" hidden>
-            Copy this link:
-            <input id="share-fallback-input" type="text" readonly>
-          </label>
-        </div>
       </div>
     </section>
 
     <div class="map-col">
+      <!-- The map's controls live with the map (#135). They used to sit at the
+           bottom of the left column, 973px below the bottom of the map they
+           act on, so switching off a layer meant scrolling the map out of
+           view. Above the map rather than over it: no overlay against a light
+           basemap, no z-index, and on a narrow screen it stacks directly
+           above the map because the whole column does. -->
+      <div class="controls-card">
+        <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
+        <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
+        <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
+          <span class="layer-chips-label">Show</span>
+          <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
+          <button type="button" class="button-muted layer-chip" data-layer="links" aria-pressed="true">Links</button>
+          <button type="button" class="button-muted layer-chip" data-layer="heat" aria-pressed="true">Heat</button>
+          <div class="relief-wrap">
+            <button id="relief-button" type="button" class="button-muted layer-chip" aria-expanded="false" aria-haspopup="dialog" hidden>Relief 6.0×</button>
+            <div id="terrain-control" class="terrain-control" role="dialog" aria-label="Relief exaggeration" hidden>
+              <label for="terrain-exaggeration">
+                <span>Relief exaggeration</span>
+                <b id="terrain-exaggeration-value">6.0x</b>
+              </label>
+              <input id="terrain-exaggeration" type="range" min="1" max="12" step="0.5" value="6">
+              <p class="terrain-control-note">
+                A ~30 m global model, for looking at. Step 3 measures line of sight from AHN at 0.5 m.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="controls-meta">
+          <button id="share-button" type="button" class="button-secondary">Share</button>
+        </div>
+        <!-- Full-width rows last, so they wrap below the button row. -->
+        <p id="share-status" class="share-status" role="status" hidden></p>
+        <label id="share-fallback" class="share-fallback" hidden>
+          Copy this link:
+          <input id="share-fallback-input" type="text" readonly>
+        </label>
+      </div>
       <section class="map-wrap" id="map-wrap">
         <div id="map3d" aria-label="Map showing repeater locations"></div>
         <div id="manual-banner" class="manual-banner" role="status" hidden>
@@ -1883,6 +2019,7 @@
     const applyClusterWeightsButton = document.getElementById("apply-cluster-weights-button");
     const manualModeButton = document.getElementById("manual-mode-button");
     const terrainControl = document.getElementById("terrain-control");
+    const reliefButton = document.getElementById("relief-button");
     const terrainExaggerationInput = document.getElementById("terrain-exaggeration");
     const terrainExaggerationValue = document.getElementById("terrain-exaggeration-value");
     const manualBanner = document.getElementById("manual-banner");
@@ -2119,8 +2256,60 @@
     }
 
     function setDiscoveryCollapsed(collapsed) {
-      panelDiscovery.classList.toggle("is-collapsed", collapsed);
+      if (collapsed) collapseStepOnce(panelDiscovery, true);
+      else setStepCollapsed(panelDiscovery, false);
     }
+
+    // Folding a step is the operator's call once they have made it, so an
+    // automatic fold never fires again on a panel they opened by hand (#135).
+    const stepOpenedByHand = new WeakSet();
+
+    function setStepCollapsed(panel, collapsed) {
+      if (!panel) return;
+      panel.classList.toggle("is-collapsed", collapsed);
+      const head = panel.querySelector(".step-head");
+      if (head) head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    }
+
+    function collapseStepOnce(panel, collapsed) {
+      if (!panel || stepOpenedByHand.has(panel)) return;
+      setStepCollapsed(panel, collapsed);
+    }
+
+    // What a folded step is worth saying in one line.
+    function stepSummary(panel) {
+      if (panel === panelDiscovery) {
+        const n = parseWeightedPrefixes(prefixInput.value).length;
+        const n2 = prefix2Input ? parseWeightedPrefixes(prefix2Input.value).length : 0;
+        if (!n) return "";
+        return n2 ? `${n} + ${n2} prefixes` : `${n} prefix${n === 1 ? "" : "es"}`;
+      }
+      if (panel === panelCluster) {
+        if (!currentResolvedContext) return "";
+        return `${uniquePrefixCount(currentMatchedNodes)} observers`;
+      }
+      if (panel === panelTerrain) {
+        return hasObserverEstimate ? "estimate ready" : "";
+      }
+      return "";
+    }
+
+    function syncStepSummaries() {
+      [panelDiscovery, panelCluster, panelTerrain].forEach((panel) => {
+        const el = panel && panel.querySelector(".step-summary");
+        if (el) el.textContent = stepSummary(panel);
+      });
+    }
+
+    document.querySelectorAll(".step-panel .step-head").forEach((head) => {
+      head.addEventListener("click", () => {
+        const panel = head.closest(".step-panel");
+        if (!panel || panel.classList.contains("is-locked")) return;
+        const collapsing = !panel.classList.contains("is-collapsed");
+        if (!collapsing) stepOpenedByHand.add(panel);
+        setStepCollapsed(panel, collapsing);
+      });
+    });
 
     function syncControlStates() {
       const hasClues = parseWeightedPrefixes(prefixInput.value).length > 0;
@@ -2137,7 +2326,11 @@
         // Nothing to share without first-hop prefixes — that's the one
         // parameter the deep-link reader requires (#10).
         shareButton.disabled = !hasClues;
-        if (!hasClues) resetShareUi("Enter prefixes first to share a link.");
+        // The reason lives on the disabled button rather than as a standing
+        // line in the strip, which would keep the strip two rows tall before
+        // anything has happened (#135).
+        shareButton.title = hasClues ? "Copy a link to this scene" : "Enter prefixes first to share a link";
+        if (!hasClues) resetShareUi();
       }
       if (manualModeButton) {
         // There is nothing to resolve until a cluster is locked, so the
@@ -2149,6 +2342,7 @@
       // Same rule as the manual-mode button: the evidence layers exist once
       // a cluster is locked, so the switch appears with them (#119).
       if (layerChips) layerChips.hidden = !hasRegion;
+      syncStepSummaries();
       syncAddressBar();
     }
 
@@ -4602,9 +4796,14 @@
       updateClueZone(dedupedNodes);
       // Zoom to the de-duplicated observers only (no far duplicates / support).
       fitMapToNodes(dedupedNodes);
-      revealOnNarrow(mapWrap);
+      // Scroll to the strip, not the map: the strip sits directly above it
+      // now, so aiming at the map alone would put its controls just off the
+      // top of the screen (#135).
+      revealOnNarrow(document.querySelector(".map-col"));
+      // The caveats themselves are on their own lines in the cluster status
+      // now (#134), so this says what happened and where to look, once.
       discoverStatus.textContent = (dupRemoved.length || hullExcluded.length)
-        ? `Cluster selected near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}.${hullNote}${dedupNote} Review the observers below, then lock with “Apply Inside Locked Cluster” and continue to Step 3.`
+        ? `Cluster selected near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}. Review the observers in Step 2, then apply.`
         : `Cluster locked near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)} with ${uniquePrefixCount(dedupedNodes)} observers. Step 3 is ready.`;
       terrainStatus.textContent = "Step 3 ready. Estimate the unknown node from these observers, then optionally refine with Terrain + LOS.";
       updateWorkflowSteps("done");
@@ -4797,6 +4996,11 @@
         hasObserverEstimate = true;
         lastEstimateTerrain = false;
         open3DView(true);   // tilt the (flat) 3D view into perspective on the estimate
+        // On a phone the column stacks above the map, and Step 2's observer
+        // list alone runs to ~1500px, so the answer landed 2.8 screenfuls
+        // down (#135). Once there is an estimate, the list has done its job:
+        // fold it, unless the operator has opened it by hand.
+        if (narrowScreen()) collapseStepOnce(panelCluster, true);
       } finally {
         estimateButton.disabled = false;
         syncControlStates();
@@ -5354,15 +5558,30 @@
       return Number.isFinite(parsed) && parsed >= 1 ? parsed : TERRAIN_DEFAULT_EXAGGERATION;
     }
 
+    function setReliefOpen(open) {
+      if (!terrainControl || !reliefButton) return;
+      const show = Boolean(open) && terrainAvailable;
+      terrainControl.hidden = !show;
+      reliefButton.setAttribute("aria-expanded", show ? "true" : "false");
+    }
+
     function syncTerrainControl() {
       if (!terrainControl) return;
-      // Absent rather than present-and-dead when there is no terrain to scale.
-      terrainControl.hidden = !terrainAvailable;
-      if (!terrainAvailable) return;
+      // Absent rather than present-and-dead when there is no terrain to scale
+      // — that goes for the chip too, which is the only part of this on screen
+      // until it is opened (#135).
+      if (reliefButton) reliefButton.hidden = !terrainAvailable;
+      if (!terrainAvailable) {
+        setReliefOpen(false);
+        return;
+      }
       // The factor lives in the label only. It used to be restated in the note
       // as well, which meant a three-line caveat rewriting itself on every drag
       // of the slider for no gain.
-      terrainExaggerationValue.textContent = `${currentExaggeration().toFixed(1)}x`;
+      const factor = `${currentExaggeration().toFixed(1)}x`;
+      terrainExaggerationValue.textContent = factor;
+      // On the chip as well, so the strip states the setting without opening.
+      if (reliefButton) reliefButton.textContent = `Relief ${currentExaggeration().toFixed(1)}×`;
     }
 
     function applyTerrainExaggeration() {
@@ -5857,6 +6076,21 @@
 
     if (terrainExaggerationInput) {
       terrainExaggerationInput.addEventListener("input", () => { applyTerrainExaggeration(); syncAddressBar(); });
+    }
+
+    // Same open/close behaviour as the What's new panel: the button toggles,
+    // a click outside or Escape closes.
+    if (reliefButton) {
+      reliefButton.addEventListener("click", () => setReliefOpen(terrainControl.hidden));
+      document.addEventListener("click", (event) => {
+        if (terrainControl.hidden) return;
+        if (terrainControl.contains(event.target)) return;
+        if (event.target instanceof Element && event.target.closest("#relief-button")) return;
+        setReliefOpen(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !terrainControl.hidden) setReliefOpen(false);
+      });
     }
 
 
