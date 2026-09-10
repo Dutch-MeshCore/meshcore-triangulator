@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-done-resolving-applies",
+    "date": "2026-09-10",
+    "title": "Finishing on the map applies what you picked",
+    "body": "Swapping which node stands for a prefix on the map only ticked a box in the Step 2 list; until you scrolled back and pressed Apply Inside Locked Cluster the map kept showing the old pick. “Done resolving” now applies the picks, along with any weight you changed, and says so. Leaving the cluster instead, with Choose Another Cluster or by switching to a rival region, still applies nothing."
+  },
+  {
     "id": "2026-09-07-antenna-height-from-the-roof",
     "date": "2026-09-07",
     "title": "A repeater on a roof gets its real antenna height",
