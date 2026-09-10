@@ -22,6 +22,9 @@
       --panel-border: rgba(143, 187, 201, 0.18);
       --text: #f3fbff;
       --muted: #9eb6c0;
+      /* Help text sits a step below --muted so a field's label always reads
+         louder than the sentence explaining it (#132). */
+      --faint: #6b8794;
       --accent: #00b894;
       --accent-2: #ff9f43;
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
@@ -141,8 +144,41 @@
     .topbar-dropdown-menu a {
       font-size: 0.82rem;
     }
-    .topbar-github {
+    .topbar-meta {
       margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .topbar-meta .is-icon {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-size: 0.8rem;
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .topbar-meta .is-icon:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text);
+    }
+    /* The panel hangs off the topbar now, so it opens downward from the right
+       edge rather than from a card in the column. */
+    .topbar-meta .whats-new-panel {
+      top: calc(100% + 10px);
+      left: auto;
+      right: 0;
+    }
+
+    .topbar-github {
       flex: 0 0 auto;
       border-radius: 10px;
       padding: 6px 12px;
@@ -191,10 +227,41 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-radius: 14px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .layer-chips-label {
+      font-size: 0.64rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-right: 2px;
+    }
+    /* Share is the one control here that is not about the map, so it sits at
+       the far end rather than in the run of map buttons. */
+    .controls-card .controls-meta {
+      margin-left: auto;
+    }
+
+    /* Relief is a slider with a paragraph of explanation; as a chip plus a
+       popover the strip stays one line (#135). */
+    .relief-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .relief-wrap .terrain-control {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 20;
+      width: 250px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(7, 25, 35, 0.97);
+      border: 1px solid rgba(143, 187, 201, 0.28);
+      box-shadow: var(--shadow);
     }
     .controls-card button {
       margin: 0;
@@ -371,31 +438,64 @@
        three controls on one row left the list unreadable. */
     /* Spam-detector import folded under one line (#117): the first-hop
        field is what a first visit needs, the import is the shortcut. */
-    .import-details {
-      margin-bottom: 12px;
+    /* Two ways into Step 1, as a segmented control (#133). */
+    .entry-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
     }
-    .import-details summary {
-      cursor: pointer;
+    /* Beats `.step-panel button` (0,1,1) on the accent fill and the margin. */
+    .step-panel .entry-tabs .entry-tab {
+      margin: 0;
+      border: 0;
+      border-radius: 9px;
+      padding: 7px 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      background: transparent;
+      /* --faint is for text that recedes under a label; a tab is a control you
+         have to be able to read and click. */
       color: var(--muted);
-      font-size: 0.84rem;
-      padding: 8px 0;
+      box-shadow: none;
+    }
+    .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
+      background: rgba(0, 184, 148, 0.18);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px rgba(0, 184, 148, 0.35);
+    }
+    .step-panel .entry-tabs .entry-tab:hover {
+      color: var(--text);
+      filter: none;
+    }
+
+    /* The uncommon half of Step 1, closed until asked for (#133). */
+    .hop2-details {
+      margin-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 12px;
+    }
+    .hop2-details summary {
+      cursor: pointer;
       list-style: none;
+      color: var(--muted);
+      font-size: 0.8rem;
     }
-    .import-details summary::-webkit-details-marker {
-      display: none;
+    .hop2-details summary::-webkit-details-marker { display: none; }
+    .hop2-details summary::before {
+      content: "+ ";
+      color: var(--accent);
+      font-weight: 600;
     }
-    .import-details summary::before {
-      content: "▸";
-      display: inline-block;
-      width: 1em;
-      transition: transform 0.15s ease;
-    }
-    .import-details[open] summary::before {
-      transform: rotate(90deg);
-    }
-    .import-details[open] summary {
-      margin-bottom: 8px;
-    }
+    .hop2-details[open] summary::before { content: "– "; }
+    .hop2-details[open] summary { margin-bottom: 12px; }
+    .hop2-details summary:hover { color: var(--text); }
+
     .step-panel select.import-select {
       width: 100%;
       border-radius: 12px;
@@ -415,11 +515,72 @@
     }
     .step-panel .import-row button { margin-top: 0; }
     /* Tighter help text to keep the step panels compact. */
+    /* Three roles under a field, and they have to look like three things
+       (#132). Before this they were all one colour within a pixel of each
+       other, and p.hint inherited --text at .85 opacity, which rendered
+       BRIGHTER than the --muted label above it: the explanation outshouted
+       the field it explained.
+
+       .field-help  static explanation. Never overwritten, so it is still
+                    there after you type. Quietest of the three.
+       p.hint       what the app says back. Monospaced with an accent rule so
+                    it cannot be mistaken for the next field's label, which is
+                    exactly what happened when "Parsed observers: ..." replaced
+                    the help text and sat flush against the label below. */
+    .step-panel p.field-help {
+      margin: 5px 0 0;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--faint);
+    }
+    .step-panel p.hint:empty {
+      display: none;
+    }
     .step-panel p.hint {
       margin: 6px 0 0;
-      font-size: 0.78rem;
-      line-height: 1.4;
-      opacity: 0.85;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--muted);
+      padding-left: 9px;
+      border-left: 2px solid var(--accent);
+    }
+    /* A caveat is not the same as a result (#54, #85). */
+    .step-panel p.hint.is-caveat {
+      border-left-color: var(--accent-2);
+    }
+    /* A field group needs air before the next one starts, or the reply line
+       still reads as the next label's opening words (#132). */
+    .step-panel p + label,
+    .step-panel p + .radius-row {
+      margin-top: 14px;
+    }
+    .step-panel .label-optional {
+      color: var(--faint);
+      font-weight: 400;
+      font-size: 0.94em;
+    }
+    /* An inline example of what to type, instead of the literal backticks
+       that used to ship as UI text. */
+    .step-panel .sample {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--muted);
+    }
+    /* Nothing styled links inside the panels, so the browser default #0000EE
+       landed on a dark teal card (#132). */
+    .step-panel a,
+    .utility-panel a {
+      color: var(--accent);
+      text-underline-offset: 2px;
+      text-decoration-color: rgba(0, 184, 148, 0.45);
+    }
+    .step-panel a:hover,
+    .utility-panel a:hover {
+      text-decoration-color: var(--accent);
     }
 
     .dot {
@@ -467,13 +628,69 @@
       pointer-events: none;
     }
 
+    /* The head is the control that folds the panel (#135). Step 1 already
+       collapsed on its own when a cluster locked, but there was no way to open
+       it again and nothing said what it held. */
+    /* `.step-panel button` (0,1,1) paints every button in the panel with the
+       accent fill, so the head has to outspecify it or it renders as a big
+       green primary action. */
+    .step-panel .step-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "kicker chevron"
+        "title  chevron";
+      align-items: center;
+      gap: 0 10px;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+    .step-panel .step-head .step-kicker { grid-area: kicker; }
+    .step-panel .step-head h3 { grid-area: title; }
+    .step-panel .step-head .step-chev {
+      grid-area: chevron;
+      color: var(--faint);
+      font-size: 0.7rem;
+      transition: transform 0.15s ease;
+    }
+    .step-panel .step-head .step-chev::before { content: "▾"; }
+    @media (prefers-reduced-motion: reduce) {
+      .step-panel .step-head .step-chev { transition: none; }
+    }
+    .step-panel .step-head:hover .step-chev { color: var(--text); }
+    /* The summary only earns its place once the panel is folded; open, the
+       panel itself is the summary. */
+    .step-summary {
+      grid-area: title;
+      justify-self: end;
+      align-self: center;
+      font-size: 0.74rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      display: none;
+    }
+
     .step-panel.is-collapsed .step-body {
       display: none;
     }
+    .step-panel.is-collapsed .step-chev { transform: rotate(-90deg); }
+    .step-panel.is-collapsed .step-summary:not(:empty) { display: block; }
+    .step-panel.is-collapsed h3 { margin-bottom: 0; }
 
     .step-panel.is-collapsed {
       padding-bottom: 12px;
     }
+    /* Nothing to fold before a step is reachable. */
+    .step-panel.is-locked .step-head { cursor: default; }
+    .step-panel.is-locked .step-chev { visibility: hidden; }
 
     .step-kicker {
       display: inline-block;
@@ -574,9 +791,10 @@
     .step-panel label,
     .utility-panel label {
       display: block;
-      color: var(--muted);
-      font-size: 0.84rem;
-      margin-bottom: 6px;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.845rem;
+      margin-bottom: 5px;
     }
 
     .source-panel input,
@@ -826,13 +1044,33 @@
 
     .observer-row {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) 64px;
+      grid-template-columns: auto minmax(0, 1fr) 58px;
       gap: 8px;
       align-items: center;
       padding: 5px 8px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .cluster-status .cluster-headline {
+      margin: 0 0 10px;
+      font-size: 0.845rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    /* The count leads each line so the list can be scanned down its left edge
+       instead of read as prose (#134). */
+    .cluster-status p.hint {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .cluster-status p.hint b {
+      flex: 0 0 auto;
+      color: var(--text);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
     }
 
     .observer-copy {
@@ -856,8 +1094,16 @@
     }
 
     .observer-copy strong {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: 0.8rem;
-      line-height: 1.2;
+      line-height: 1.25;
+      min-width: 0;
+    }
+    /* The name gives way to the tag instead of pushing it out of the row. */
+    .observer-name {
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -866,19 +1112,24 @@
     .observer-copy span {
       color: var(--muted);
       font-size: 0.72rem;
-      line-height: 1.25;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .observer-reason {
-      display: inline-block;
-      margin-top: 1px;
+      flex: 0 0 auto;
       padding: 0 6px;
       border-radius: 999px;
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
       background: rgba(255, 159, 67, 0.16);
       color: #ffb86b;
       border: 1px solid rgba(255, 159, 67, 0.3);
+      cursor: help;
     }
 
     .observer-reason.is-range {
@@ -903,7 +1154,10 @@
     .observer-support[open] > summary::before { content: "▾ "; }
     .observer-support[open] { display: grid; gap: 4px; }
 
-    .observer-weight {
+    /* `.step-panel input` (0,1,1) was outspecifying this (0,1,0), so the field
+       kept the panel's 12px padding and stood 48px tall — it, not the text,
+       was what made every observer row 60px (#134). */
+    .step-panel .observer-weight {
       width: 100%;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1245,17 +1499,6 @@
        It lives in the controls card next to the 3D toggle rather than floating
        over the map. It is a setting for that view, so it belongs with the
        control that opens it, and the map is for the map. */
-    .terrain-control {
-      /* The controls card is flex-wrap; this is how its other full-width rows
-         claim a line of their own (see .share-status). */
-      flex: 1 0 100%;
-      margin-top: 2px;
-      padding: 9px 11px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
     .terrain-control label {
       display: flex;
       justify-content: space-between;
@@ -1438,44 +1681,97 @@
       <a href="https://mesh-hunter.eu/" target="_blank" rel="noopener">Mesh-Hunter ↗</a>
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
-    <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
+    <div class="topbar-meta">
+      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
+      <div class="whats-new">
+        <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
+          <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
+        </button>
+        <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
+          <div id="whats-new-list"></div>
+        </div>
+      </div>
+      <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
   </div>
   <main class="shell">
     <section class="panel">
       <div class="input-stack">
         <section class="step-panel is-locked" id="panel-discovery">
-          <span class="step-kicker">Step 1</span>
-          <h3>Clues + Regions</h3>
-          <div class="step-body">
-            <details id="import-details" class="import-details">
-              <summary>Load a spam-detector incident instead</summary>
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-discovery">
+            <span class="step-kicker">Step 1</span>
+            <h3>Clues + Regions</h3>
+            <span class="step-summary" id="summary-discovery"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-discovery">
+            <!-- Two equal ways to start (#133): you know the prefixes, or you
+                 have an incident. The importer used to be a <details> above the
+                 main field, so the exception route opened the panel. -->
+            <div class="entry-tabs" role="group" aria-label="How to start">
+              <button id="entry-tab-prefixes" type="button" class="entry-tab" aria-pressed="true">Prefixes</button>
+              <button id="entry-tab-incident" type="button" class="entry-tab" aria-pressed="false">Spam incident</button>
+            </div>
+
+            <div id="entry-pane-incident" class="entry-pane" hidden>
+              <label for="incident-select">Recent incidents</label>
               <select id="incident-select" class="import-select" aria-label="Recent incidents on mc-spamdetector.nl">
                 <option value="">Recent incidents…</option>
               </select>
+              <p class="field-help">
+                From <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>.
+                Its entry hops become your first-hop prefixes, weighted by how many packets each relayed.
+              </p>
+              <label for="incident-input">Or paste an attack URL or number</label>
               <div class="import-row">
-                <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
+                <input id="incident-input" type="text" value="" placeholder="2047" aria-label="Attack URL or number">
                 <button id="incident-load-button" type="button" class="button-secondary">Load</button>
               </div>
-              <p id="incident-status" class="hint">Entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a> become the first-hop prefixes, weighted by packets; then it finds the region.</p>
-            </details>
-            <label for="prefix-input">First-hop prefixes — heard the source directly</label>
-            <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
-            <p id="prefix-status" class="hint">`PREFIX` or `PREFIX:count` — 2/4/6 hex, comma-separated. Count = times heard (weight).</p>
-            <label for="prefix2-input">Second-hop prefixes — heard a first-hop relay (optional)</label>
-            <input id="prefix2-input" type="text" value="" placeholder="a0:8, fc">
-            <p id="prefix2-status" class="hint">Weaker, wider clue. Down-weighted automatically.</p>
-            <div class="radius-row">
-              <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
-              <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
+              <p id="incident-status" class="hint"></p>
             </div>
-            <button id="discover-button" type="button">Find Best Matching Region</button>
-            <p id="discover-status" class="hint">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
+
+            <div id="entry-pane-prefixes" class="entry-pane">
+              <label for="prefix-input">First-hop prefixes</label>
+              <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
+              <p class="field-help">
+                Repeaters that heard the source directly. <span class="sample">2C</span> or
+                <span class="sample">2C:4</span>, comma separated — 2, 4 or 6 hex, and the number is
+                how often it was heard.
+              </p>
+              <p id="prefix-status" class="hint"></p>
+
+              <!-- Closed by default: a run is first-hop only most of the time,
+                   and 2nd-hop km governs nothing else, so it travels with the
+                   field it belongs to (#133). Opened on demand, and opened for
+                   you when a shared link actually carries second-hop clues. -->
+              <details id="hop2-details" class="hop2-details">
+                <summary>Add second-hop prefixes</summary>
+                <label for="prefix2-input">Second-hop prefixes</label>
+                <input id="prefix2-input" type="text" value="" placeholder="a0:8, fc">
+                <p class="field-help">Heard a first-hop relay instead. Weaker and wider, so it counts for less.</p>
+                <div class="radius-row">
+                  <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
+                </div>
+              </details>
+
+              <div class="radius-row">
+                <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
+              </div>
+              <button id="discover-button" type="button">Find Best Matching Region</button>
+              <p class="field-help">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
+              <p id="discover-status" class="hint"></p>
+            </div>
           </div>
         </section>
         <section class="step-panel is-locked" id="panel-cluster">
-          <span class="step-kicker">Step 2</span>
-          <h3>Choose Cluster</h3>
-          <p id="cluster-status">Candidate clusters will appear here after discovery.</p>
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-cluster">
+            <span class="step-kicker">Step 2</span>
+            <h3>Choose Cluster</h3>
+            <span class="step-summary" id="summary-cluster"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-cluster">
+          <div id="cluster-status" class="cluster-status">Candidate clusters will appear here after discovery.</div>
           <div id="candidate-list" class="candidate-list" hidden></div>
           <label for="cluster-add-prefix-input" id="cluster-add-prefix-label" hidden>Add repeater prefixes within this cluster</label>
           <input id="cluster-add-prefix-input" type="text" hidden placeholder="48, 93">
@@ -1484,56 +1780,63 @@
           <button id="apply-cluster-weights-button" type="button" hidden>Apply Inside Locked Cluster</button>
           <p id="cluster-editor-status" hidden>Only resolved observers inside the locked cluster can be edited here.</p>
           <button id="change-cluster-button" type="button" class="button-secondary" hidden>Choose Another Cluster</button>
+          </div>
         </section>
         <section class="step-panel is-locked" id="panel-terrain">
-          <span class="step-kicker">Step 3</span>
-          <h3>Unknown Node Estimate</h3>
-          <button id="estimate-button" type="button" disabled>Estimate Unknown Node</button>
-          <button id="terrain-rescore-button" type="button" class="button-secondary" disabled>Refine with Terrain + LOS</button>
-          <p id="terrain-status">Run a weighted observer estimate first. Terrain and LOS are an optional refinement after that.</p>
+          <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-terrain">
+            <span class="step-kicker">Step 3</span>
+            <h3>Unknown Node Estimate</h3>
+            <span class="step-summary" id="summary-terrain"></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+          <div class="step-body" id="step-body-terrain">
+            <button id="estimate-button" type="button" disabled>Estimate Unknown Node</button>
+            <button id="terrain-rescore-button" type="button" class="button-secondary" disabled>Refine with Terrain + LOS</button>
+            <p id="terrain-status">Run a weighted observer estimate first. Terrain and LOS are an optional refinement after that.</p>
+          </div>
         </section>
-        <div class="controls-card">
-          <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
-          <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
-          <button id="share-button" type="button" class="button-secondary">Share</button>
-          <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
-            <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
-            <button type="button" class="button-muted layer-chip" data-layer="links" aria-pressed="true">Links</button>
-            <button type="button" class="button-muted layer-chip" data-layer="heat" aria-pressed="true">Heat</button>
-          </div>
-          <div class="controls-meta">
-          <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
-          <div class="whats-new">
-            <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
-              <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
-            </button>
-            <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
-              <div id="whats-new-list"></div>
-            </div>
-          </div>
-          </div>
-          <!-- Full-width rows last: they wrap below the button row rather
-               than pushing the right-aligned bell onto a second line. -->
-          <div id="terrain-control" class="terrain-control" hidden>
-            <label for="terrain-exaggeration">
-              <span>Relief exaggeration</span>
-              <b id="terrain-exaggeration-value">6.0x</b>
-            </label>
-            <input id="terrain-exaggeration" type="range" min="1" max="12" step="0.5" value="6">
-            <p class="terrain-control-note">
-              A ~30 m global model, for looking at. Step 3 measures line of sight from AHN at 0.5 m.
-            </p>
-          </div>
-          <p id="share-status" class="share-status" role="status" hidden></p>
-          <label id="share-fallback" class="share-fallback" hidden>
-            Copy this link:
-            <input id="share-fallback-input" type="text" readonly>
-          </label>
-        </div>
       </div>
     </section>
 
     <div class="map-col">
+      <!-- The map's controls live with the map (#135). They used to sit at the
+           bottom of the left column, 973px below the bottom of the map they
+           act on, so switching off a layer meant scrolling the map out of
+           view. Above the map rather than over it: no overlay against a light
+           basemap, no z-index, and on a narrow screen it stacks directly
+           above the map because the whole column does. -->
+      <div class="controls-card">
+        <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
+        <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
+        <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
+          <span class="layer-chips-label">Show</span>
+          <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
+          <button type="button" class="button-muted layer-chip" data-layer="links" aria-pressed="true">Links</button>
+          <button type="button" class="button-muted layer-chip" data-layer="heat" aria-pressed="true">Heat</button>
+          <div class="relief-wrap">
+            <button id="relief-button" type="button" class="button-muted layer-chip" aria-expanded="false" aria-haspopup="dialog" hidden>Relief 6.0×</button>
+            <div id="terrain-control" class="terrain-control" role="dialog" aria-label="Relief exaggeration" hidden>
+              <label for="terrain-exaggeration">
+                <span>Relief exaggeration</span>
+                <b id="terrain-exaggeration-value">6.0x</b>
+              </label>
+              <input id="terrain-exaggeration" type="range" min="1" max="12" step="0.5" value="6">
+              <p class="terrain-control-note">
+                A ~30 m global model, for looking at. Step 3 measures line of sight from AHN at 0.5 m.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="controls-meta">
+          <button id="share-button" type="button" class="button-secondary">Share</button>
+        </div>
+        <!-- Full-width rows last, so they wrap below the button row. -->
+        <p id="share-status" class="share-status" role="status" hidden></p>
+        <label id="share-fallback" class="share-fallback" hidden>
+          Copy this link:
+          <input id="share-fallback-input" type="text" readonly>
+        </label>
+      </div>
       <section class="map-wrap" id="map-wrap">
         <div id="map3d" aria-label="Map showing repeater locations"></div>
         <div id="manual-banner" class="manual-banner" role="status" hidden>
@@ -1716,6 +2019,7 @@
     const applyClusterWeightsButton = document.getElementById("apply-cluster-weights-button");
     const manualModeButton = document.getElementById("manual-mode-button");
     const terrainControl = document.getElementById("terrain-control");
+    const reliefButton = document.getElementById("relief-button");
     const terrainExaggerationInput = document.getElementById("terrain-exaggeration");
     const terrainExaggerationValue = document.getElementById("terrain-exaggeration-value");
     const manualBanner = document.getElementById("manual-banner");
@@ -1952,8 +2256,60 @@
     }
 
     function setDiscoveryCollapsed(collapsed) {
-      panelDiscovery.classList.toggle("is-collapsed", collapsed);
+      if (collapsed) collapseStepOnce(panelDiscovery, true);
+      else setStepCollapsed(panelDiscovery, false);
     }
+
+    // Folding a step is the operator's call once they have made it, so an
+    // automatic fold never fires again on a panel they opened by hand (#135).
+    const stepOpenedByHand = new WeakSet();
+
+    function setStepCollapsed(panel, collapsed) {
+      if (!panel) return;
+      panel.classList.toggle("is-collapsed", collapsed);
+      const head = panel.querySelector(".step-head");
+      if (head) head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    }
+
+    function collapseStepOnce(panel, collapsed) {
+      if (!panel || stepOpenedByHand.has(panel)) return;
+      setStepCollapsed(panel, collapsed);
+    }
+
+    // What a folded step is worth saying in one line.
+    function stepSummary(panel) {
+      if (panel === panelDiscovery) {
+        const n = parseWeightedPrefixes(prefixInput.value).length;
+        const n2 = prefix2Input ? parseWeightedPrefixes(prefix2Input.value).length : 0;
+        if (!n) return "";
+        return n2 ? `${n} + ${n2} prefixes` : `${n} prefix${n === 1 ? "" : "es"}`;
+      }
+      if (panel === panelCluster) {
+        if (!currentResolvedContext) return "";
+        return `${uniquePrefixCount(currentMatchedNodes)} observers`;
+      }
+      if (panel === panelTerrain) {
+        return hasObserverEstimate ? "estimate ready" : "";
+      }
+      return "";
+    }
+
+    function syncStepSummaries() {
+      [panelDiscovery, panelCluster, panelTerrain].forEach((panel) => {
+        const el = panel && panel.querySelector(".step-summary");
+        if (el) el.textContent = stepSummary(panel);
+      });
+    }
+
+    document.querySelectorAll(".step-panel .step-head").forEach((head) => {
+      head.addEventListener("click", () => {
+        const panel = head.closest(".step-panel");
+        if (!panel || panel.classList.contains("is-locked")) return;
+        const collapsing = !panel.classList.contains("is-collapsed");
+        if (!collapsing) stepOpenedByHand.add(panel);
+        setStepCollapsed(panel, collapsing);
+      });
+    });
 
     function syncControlStates() {
       const hasClues = parseWeightedPrefixes(prefixInput.value).length > 0;
@@ -1970,7 +2326,11 @@
         // Nothing to share without first-hop prefixes — that's the one
         // parameter the deep-link reader requires (#10).
         shareButton.disabled = !hasClues;
-        if (!hasClues) resetShareUi("Enter prefixes first to share a link.");
+        // The reason lives on the disabled button rather than as a standing
+        // line in the strip, which would keep the strip two rows tall before
+        // anything has happened (#135).
+        shareButton.title = hasClues ? "Copy a link to this scene" : "Enter prefixes first to share a link";
+        if (!hasClues) resetShareUi();
       }
       if (manualModeButton) {
         // There is nothing to resolve until a cluster is locked, so the
@@ -1982,6 +2342,7 @@
       // Same rule as the manual-mode button: the evidence layers exist once
       // a cluster is locked, so the switch appears with them (#119).
       if (layerChips) layerChips.hidden = !hasRegion;
+      syncStepSummaries();
       syncAddressBar();
     }
 
@@ -3977,7 +4338,7 @@
 
     function renderParsedClues(weightedPrefixes) {
       if (!weightedPrefixes.length) {
-        prefixStatus.textContent = "Step 1: enter observer prefixes. Use `PREFIX` or `PREFIX:VALUE`.";
+        prefixStatus.textContent = "";
       } else {
         prefixStatus.textContent = `Parsed observers: ${weightedPrefixes.map((item) => `${item.prefix}:${item.weight.toFixed(2).replace(/\.00$/, "")}`).join(", ")}`;
       }
@@ -3997,6 +4358,28 @@
     // the prefix. Falls back to coords if no key is present.
     function nodeId(node) {
       return String(node.public_key || node.key || `${node.shortId}@${node.lat},${node.lon}`).toLowerCase();
+    }
+
+    // Headline plus one line per caveat (#134). Counts are ours and the text is
+    // built from constants, so there is no user input to escape here; keep it
+    // that way if a node name ever needs to appear in one of these lines.
+    function renderClusterStatus(headlineHtml, notes) {
+      const lines = notes.map((note) => `
+        <p class="hint${note.caveat ? " is-caveat" : ""}">
+          <b>${note.count}</b><span>${note.text}</span>
+        </p>`).join("");
+      clusterStatus.innerHTML = `<p class="cluster-headline">${headlineHtml}</p>${lines}`;
+    }
+
+    // Beside a name there is room for a tag, not a sentence. The full reason is
+    // the title, and the cluster status says what each of them means (#134).
+    const SHORT_REASONS = {
+      "duplicate prefix": "dup",
+      "proven-link (range only)": "range",
+      "outside 1st-hop hull": "outside"
+    };
+    function shortReason(reason) {
+      return SHORT_REASONS[reason] || reason;
     }
 
     function syncClusterEditorFromLockedRegion() {
@@ -4026,12 +4409,19 @@
         const weight = activeById.has(id) ? activeById.get(id) : (weightByPrefix.get(pfx) ?? 1);
         const row = document.createElement("div");
         row.className = checked ? "observer-row" : "observer-row is-excluded";
+        // Distance to the locked cluster's centre, computed here rather than
+        // stored: a dragged observer (#33b) has to move this number with it.
+        // It is the figure dedupeByPrefix() falls back to when proven links do
+        // not separate a prefix (#54), and until now the list never showed it.
+        const centreKm = lockedRegionCentroid ? haversineKm(lockedRegionCentroid, node) : null;
+        const facts = [];
+        if (Number.isFinite(centreKm)) facts.push(`centre ${centreKm.toFixed(1)} km`);
+        if (Number.isFinite(node.provenRadiusKm)) facts.push(`reach ${node.provenRadiusKm.toFixed(1)} km`);
         row.innerHTML = `
           <input type="checkbox" data-nodeid="${id}" data-prefix="${pfx}" ${checked ? "checked" : ""}>
           <div class="observer-copy">
-            <strong>${pfx} · ${node.adv_name || node.name || "Observer"}</strong>
-            <span>${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}${Number.isFinite(node.provenRadiusKm) ? ` · ${node.provenRadiusKm.toFixed(1)} km` : ""}</span>
-            ${reason ? `<span class="${reasonClass}">${reason}</span>` : ""}
+            <strong><span class="observer-name">${pfx} · ${node.adv_name || node.name || "Observer"}</span>${reason ? `<span class="${reasonClass}" title="${reason}">${shortReason(reason)}</span>` : ""}</strong>
+            <span>${facts.join(" · ")}</span>
           </div>
           <input class="observer-weight" type="number" min="0" step="0.05" value="${weight.toFixed(2)}" data-nodeid="${id}" data-prefix="${pfx}">
         `;
@@ -4339,44 +4729,66 @@
       candidateList.hidden = true;
       candidateList.innerHTML = "";
       changeClusterButton.hidden = false;
-      const hullNote = hullExcluded.length
-        ? ` ${hullExcluded.length} 2nd-hop node${hullExcluded.length === 1 ? "" : "s"} outside the 1st-hop hull excluded — review in the list below.`
-        : "";
-      // Same rule as the caps and filters below: nothing is decided silently.
-      // The nearest-the-centre pick is a guess, not evidence (#54), so it is
-      // named whenever it actually decided a prefix.
-      const dupGuessNote = dupCentroidDecided
-        ? ` Proven links did not separate ${dupCentroidDecided} prefix${dupCentroidDecided === 1 ? "" : "es"}, so the node nearest the cluster centre was kept. That pick biases the estimate toward the centre.`
-        : "";
-      const dedupNote = dupRemoved.length
-        ? ` Auto-removed ${dupRemoved.length} duplicate-prefix node${dupRemoved.length === 1 ? "" : "s"}, review in the list below.${dupGuessNote}`
-        : "";
-      // Never let a coverage cap look like "there was nothing more" (#38).
-      const linkCapNote = linkFetchSkipped
-        ? ` Proven links fetched for the first ${PROVEN_LINK_NODE_BUDGET} nodes only — ${linkFetchSkipped} not queried.`
-        : "";
-      // Same rule for the plausibility filter: a dropped link is reported, never
-      // silent (#61).
-      // One consolidated clause list rather than a separate sentence per rule.
-      // This line already carries the hull and dedupe notes, and three more
-      // appended sentences read as a wall. Nothing is capped silently (#38,
-      // #61, #62).
-      const radiusNotes = [];
+      // Every cap, filter and fallback is reported — nothing is decided
+      // silently (#38, #54, #61, #62, #85). These used to be concatenated into
+      // one paragraph, which in a 300px column ran to eight sentences of prose
+      // that could not be scanned (#134). Same facts, one per line, count
+      // first. `caveat` marks the ones that are inference rather than
+      // measurement, so a guess never reads as evidence.
+      const notes = [];
+      if (hullExcluded.length) {
+        notes.push({
+          count: hullExcluded.length,
+          text: `2nd-hop node${hullExcluded.length === 1 ? "" : "s"} outside the 1st-hop hull, excluded — review below`,
+          caveat: true
+        });
+      }
+      if (dupRemoved.length) {
+        notes.push({
+          count: dupRemoved.length,
+          text: `duplicate-prefix node${dupRemoved.length === 1 ? "" : "s"} removed — review below`,
+          caveat: true
+        });
+      }
+      if (dupCentroidDecided) {
+        notes.push({
+          count: dupCentroidDecided,
+          text: `prefix${dupCentroidDecided === 1 ? "" : "es"} decided by distance to centre, not by links. Biases the estimate inward.`,
+          caveat: true
+        });
+      }
+      if (linkFetchSkipped) {
+        notes.push({
+          count: linkFetchSkipped,
+          text: `node${linkFetchSkipped === 1 ? "" : "s"} not queried for proven links — first ${PROVEN_LINK_NODE_BUDGET} only`,
+          caveat: true
+        });
+      }
       if (implausibleLinksDropped) {
-        radiusNotes.push(`${implausibleLinksDropped} link${implausibleLinksDropped === 1 ? "" : "s"} too long for one hop (over ${MAX_PLAUSIBLE_LINK_KM} km)`);
+        notes.push({
+          count: implausibleLinksDropped,
+          text: `link${implausibleLinksDropped === 1 ? "" : "s"} over ${MAX_PLAUSIBLE_LINK_KM} km dropped, too long for one hop`
+        });
       }
       if (outboundLinksExcluded) {
-        radiusNotes.push(`${outboundLinksExcluded} outbound-only link${outboundLinksExcluded === 1 ? "" : "s"} excluded`);
+        notes.push({
+          count: outboundLinksExcluded,
+          text: `outbound-only link${outboundLinksExcluded === 1 ? "" : "s"} excluded`
+        });
       }
       if (observersWithoutReceiveQuorum) {
-        radiusNotes.push(`${observersWithoutReceiveQuorum} observer${observersWithoutReceiveQuorum === 1 ? "" : "s"} had under ${RECEIVE_QUORUM} inbound links, so used all directions`);
+        notes.push({
+          count: observersWithoutReceiveQuorum,
+          text: `observer${observersWithoutReceiveQuorum === 1 ? "" : "s"} under ${RECEIVE_QUORUM} inbound links, used all directions`
+        });
       }
-      const implausibleNote = radiusNotes.length ? ` Coverage radii: ${radiusNotes.join("; ")}.` : "";
-      // Which observers got a roof height, and which stay on the constant.
-      const roofNote = roofs.answered
-        ? ` Antenna heights: ${roofs.onRoof} of ${roofs.answered} observers have a building within ${ROOF_SEARCH_M} m per 3D BAG and use its roof, the rest assume ${REPEATER_ANTENNA_HEIGHT_M} m.`
-        : ` Antenna heights: 3D BAG did not answer, all observers assume ${REPEATER_ANTENNA_HEIGHT_M} m.`;
-      clusterStatus.textContent = `Cluster near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}: ${uniquePrefixCount(dedupedNodes)} observers active.${hullNote}${dedupNote}${linkCapNote}${implausibleNote}${roofNote}`;
+      notes.push(roofs.answered
+        ? { count: `${roofs.onRoof}/${roofs.answered}`, text: `antenna heights from 3D BAG roofs, the rest assume ${REPEATER_ANTENNA_HEIGHT_M} m` }
+        : { count: "0", text: `antenna heights from 3D BAG — it did not answer, all assume ${REPEATER_ANTENNA_HEIGHT_M} m`, caveat: true });
+      renderClusterStatus(
+        `<strong>${uniquePrefixCount(dedupedNodes)} observers active</strong> near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}.`,
+        notes
+      );
       syncClusterEditorFromLockedRegion();
       setDiscoveryCollapsed(true);
       renderCandidateMap([]);
@@ -4384,9 +4796,14 @@
       updateClueZone(dedupedNodes);
       // Zoom to the de-duplicated observers only (no far duplicates / support).
       fitMapToNodes(dedupedNodes);
-      revealOnNarrow(mapWrap);
+      // Scroll to the strip, not the map: the strip sits directly above it
+      // now, so aiming at the map alone would put its controls just off the
+      // top of the screen (#135).
+      revealOnNarrow(document.querySelector(".map-col"));
+      // The caveats themselves are on their own lines in the cluster status
+      // now (#134), so this says what happened and where to look, once.
       discoverStatus.textContent = (dupRemoved.length || hullExcluded.length)
-        ? `Cluster selected near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}.${hullNote}${dedupNote} Review the observers below, then lock with “Apply Inside Locked Cluster” and continue to Step 3.`
+        ? `Cluster selected near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}. Review the observers in Step 2, then apply.`
         : `Cluster locked near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)} with ${uniquePrefixCount(dedupedNodes)} observers. Step 3 is ready.`;
       terrainStatus.textContent = "Step 3 ready. Estimate the unknown node from these observers, then optionally refine with Terrain + LOS.";
       updateWorkflowSteps("done");
@@ -4579,6 +4996,11 @@
         hasObserverEstimate = true;
         lastEstimateTerrain = false;
         open3DView(true);   // tilt the (flat) 3D view into perspective on the estimate
+        // On a phone the column stacks above the map, and Step 2's observer
+        // list alone runs to ~1500px, so the answer landed 2.8 screenfuls
+        // down (#135). Once there is an estimate, the list has done its job:
+        // fold it, unless the operator has opened it by hand.
+        if (narrowScreen()) collapseStepOnce(panelCluster, true);
       } finally {
         estimateButton.disabled = false;
         syncControlStates();
@@ -4609,7 +5031,7 @@
 
     function clearMapState() {
       resetResolvedState(true);
-      discoverStatus.textContent = "Map cleared. Step 1: enter clues, then find candidate clusters.";
+      discoverStatus.textContent = "Map cleared.";
       renderParsedClues(parseWeightedPrefixes(prefixInput.value));
       updateWorkflowSteps("clues");
       syncControlStates();
@@ -4626,9 +5048,7 @@
         return;
       }
       resetResolvedState(true);
-      discoverStatus.textContent = weightedPrefixes.length
-        ? "Step 1: click “Find Best Matching Region” to resolve these clues."
-        : "Step 1: enter observer prefixes, then find candidate clusters.";
+      discoverStatus.textContent = "";
       updateWorkflowSteps("clues");
       syncControlStates();
     }
@@ -4740,8 +5160,8 @@
       const weightedPrefixes = parseWeightedPrefixes(prefixInput.value);
       renderParsedClues(weightedPrefixes);
       discoverStatus.textContent = weightedPrefixes.length
-        ? `Step 1: click “Find Best Matching Region” to resolve these clues with a ${getRegionRadiusKm().toFixed(0)} km cluster radius.`
-        : "Step 1: enter observer prefixes, then find candidate clusters.";
+        ? `Cluster radius set to ${getRegionRadiusKm().toFixed(0)} km for the next run.`
+        : "";
       updateWorkflowSteps("clues");
       syncControlStates();
     });
@@ -5138,15 +5558,30 @@
       return Number.isFinite(parsed) && parsed >= 1 ? parsed : TERRAIN_DEFAULT_EXAGGERATION;
     }
 
+    function setReliefOpen(open) {
+      if (!terrainControl || !reliefButton) return;
+      const show = Boolean(open) && terrainAvailable;
+      terrainControl.hidden = !show;
+      reliefButton.setAttribute("aria-expanded", show ? "true" : "false");
+    }
+
     function syncTerrainControl() {
       if (!terrainControl) return;
-      // Absent rather than present-and-dead when there is no terrain to scale.
-      terrainControl.hidden = !terrainAvailable;
-      if (!terrainAvailable) return;
+      // Absent rather than present-and-dead when there is no terrain to scale
+      // — that goes for the chip too, which is the only part of this on screen
+      // until it is opened (#135).
+      if (reliefButton) reliefButton.hidden = !terrainAvailable;
+      if (!terrainAvailable) {
+        setReliefOpen(false);
+        return;
+      }
       // The factor lives in the label only. It used to be restated in the note
       // as well, which meant a three-line caveat rewriting itself on every drag
       // of the slider for no gain.
-      terrainExaggerationValue.textContent = `${currentExaggeration().toFixed(1)}x`;
+      const factor = `${currentExaggeration().toFixed(1)}x`;
+      terrainExaggerationValue.textContent = factor;
+      // On the chip as well, so the strip states the setting without opening.
+      if (reliefButton) reliefButton.textContent = `Relief ${currentExaggeration().toFixed(1)}×`;
     }
 
     function applyTerrainExaggeration() {
@@ -5643,6 +6078,21 @@
       terrainExaggerationInput.addEventListener("input", () => { applyTerrainExaggeration(); syncAddressBar(); });
     }
 
+    // Same open/close behaviour as the What's new panel: the button toggles,
+    // a click outside or Escape closes.
+    if (reliefButton) {
+      reliefButton.addEventListener("click", () => setReliefOpen(terrainControl.hidden));
+      document.addEventListener("click", (event) => {
+        if (terrainControl.hidden) return;
+        if (terrainControl.contains(event.target)) return;
+        if (event.target instanceof Element && event.target.closest("#relief-button")) return;
+        setReliefOpen(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !terrainControl.hidden) setReliefOpen(false);
+      });
+    }
+
 
     // ── Spam-detector import (#107) ─────────────────────────────────────────
     // An incident on mc-spamdetector.nl lists the repeaters that heard the
@@ -5652,6 +6102,32 @@
     // side fills the field and runs discovery, as the `prefixes` deep link
     // does. Second-hop stays empty on purpose: it is a weaker clue the
     // operator rarely enters, and the estimate does not score it (#46).
+    // Which way into Step 1 is showing (#133). Loading an incident switches
+    // back to Prefixes with the values filled in, so nothing arrives invisibly.
+    const entryTabPrefixes = document.getElementById("entry-tab-prefixes");
+    const entryTabIncident = document.getElementById("entry-tab-incident");
+    const entryPanePrefixes = document.getElementById("entry-pane-prefixes");
+    const entryPaneIncident = document.getElementById("entry-pane-incident");
+    const hop2Details = document.getElementById("hop2-details");
+
+    function showEntry(which) {
+      const incident = which === "incident";
+      if (entryTabPrefixes) entryTabPrefixes.setAttribute("aria-pressed", incident ? "false" : "true");
+      if (entryTabIncident) entryTabIncident.setAttribute("aria-pressed", incident ? "true" : "false");
+      if (entryPanePrefixes) entryPanePrefixes.hidden = incident;
+      if (entryPaneIncident) entryPaneIncident.hidden = !incident;
+    }
+
+    if (entryTabPrefixes) entryTabPrefixes.addEventListener("click", () => showEntry("prefixes"));
+    if (entryTabIncident) entryTabIncident.addEventListener("click", () => showEntry("incident"));
+
+    // A shared scene must never hide part of itself, so second-hop clues open
+    // the disclosure that holds them.
+    function revealHop2IfUsed() {
+      if (!hop2Details || !prefix2Input) return;
+      if (prefix2Input.value.trim()) hop2Details.open = true;
+    }
+
     const incidentSelect = document.getElementById("incident-select");
     const incidentInput = document.getElementById("incident-input");
     const incidentLoadButton = document.getElementById("incident-load-button");
@@ -5699,8 +6175,7 @@
         return;
       }
       if (incidentStatus) incidentStatus.textContent = `Loading incident #${id} from the spam detector...`;
-      const importDetails = document.getElementById("import-details");
-      if (importDetails) importDetails.open = true;
+      showEntry("incident");
       if (incidentLoadButton) incidentLoadButton.disabled = true;
       try {
         const response = await fetch(`/proxy/spamdetector/incident/${id}`);
@@ -5712,9 +6187,12 @@
         if (incidentSelect) incidentSelect.value = [...incidentSelect.options].some((o) => o.value === id) ? id : "";
         applyPrefixInput();
         const count = data.hops.length;
-        if (incidentStatus) {
-          incidentStatus.textContent = `Incident #${id}: ${count} entry hop${count === 1 ? "" : "s"} loaded as first-hop prefixes, weighted by packets. Second-hop left empty.`;
-        }
+        showEntry("prefixes");
+        if (incidentStatus) incidentStatus.textContent = "";
+        // applyPrefixInput() has just written "Parsed observers: ..." here;
+        // where they came from is the more useful thing to say until the
+        // operator edits them.
+        prefixStatus.textContent = `From incident #${id}: ${count} entry hop${count === 1 ? "" : "s"}, weighted by packets. Second-hop left empty.`;
         await runCaseDiscovery();
       } catch (error) {
         if (incidentStatus) incidentStatus.textContent = `Incident #${id} did not load: ${error.message}`;
@@ -5779,7 +6257,10 @@
       }
       prefixInput.value = prefixes;
       const prefixes2 = params.get("prefixes2");
-      if (prefixes2 && prefix2Input) prefix2Input.value = prefixes2;
+      if (prefixes2 && prefix2Input) {
+        prefix2Input.value = prefixes2;
+        revealHop2IfUsed();
+      }
       const hop2 = Number.parseFloat(params.get("hop2"));
       if (Number.isFinite(hop2) && hop2 > 0 && hop2RadiusInput) hop2RadiusInput.value = String(hop2);
       const cluster = Number.parseFloat(params.get("cluster"));
