@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-shorter-observer-list",
+    "date": "2026-09-10",
+    "title": "The observer list says what you are choosing on",
+    "body": "Every row spent three lines on coordinates to five decimals, which is one-metre precision in a list where you pick between repeaters kilometres apart. Rows now show how far each one is from the centre of the cluster, which is the number the automatic pick is actually made on, next to its proven reach. The reason a row is unticked moved up beside the name as a short tag. Coordinates are still in the node's popup on the map. A row went from 60 to 42 pixels, so the whole column is about 350 pixels shorter. The cluster summary was one paragraph of six caveats; it is now six lines with the count in front, and the two that are a guess rather than a measurement are marked."
+  },
+  {
     "id": "2026-09-10-two-ways-into-step-1",
     "date": "2026-09-10",
     "title": "Two ways to start, and second-hop out of the way",

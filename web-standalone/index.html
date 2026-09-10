@@ -924,13 +924,33 @@
 
     .observer-row {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) 64px;
+      grid-template-columns: auto minmax(0, 1fr) 58px;
       gap: 8px;
       align-items: center;
       padding: 5px 8px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .cluster-status .cluster-headline {
+      margin: 0 0 10px;
+      font-size: 0.845rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    /* The count leads each line so the list can be scanned down its left edge
+       instead of read as prose (#134). */
+    .cluster-status p.hint {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .cluster-status p.hint b {
+      flex: 0 0 auto;
+      color: var(--text);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
     }
 
     .observer-copy {
@@ -954,8 +974,16 @@
     }
 
     .observer-copy strong {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: 0.8rem;
-      line-height: 1.2;
+      line-height: 1.25;
+      min-width: 0;
+    }
+    /* The name gives way to the tag instead of pushing it out of the row. */
+    .observer-name {
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -964,19 +992,24 @@
     .observer-copy span {
       color: var(--muted);
       font-size: 0.72rem;
-      line-height: 1.25;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .observer-reason {
-      display: inline-block;
-      margin-top: 1px;
+      flex: 0 0 auto;
       padding: 0 6px;
       border-radius: 999px;
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
       background: rgba(255, 159, 67, 0.16);
       color: #ffb86b;
       border: 1px solid rgba(255, 159, 67, 0.3);
+      cursor: help;
     }
 
     .observer-reason.is-range {
@@ -1001,7 +1034,10 @@
     .observer-support[open] > summary::before { content: "▾ "; }
     .observer-support[open] { display: grid; gap: 4px; }
 
-    .observer-weight {
+    /* `.step-panel input` (0,1,1) was outspecifying this (0,1,0), so the field
+       kept the panel's 12px padding and stood 48px tall — it, not the text,
+       was what made every observer row 60px (#134). */
+    .step-panel .observer-weight {
       width: 100%;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1606,7 +1642,7 @@
         <section class="step-panel is-locked" id="panel-cluster">
           <span class="step-kicker">Step 2</span>
           <h3>Choose Cluster</h3>
-          <p id="cluster-status">Candidate clusters will appear here after discovery.</p>
+          <div id="cluster-status" class="cluster-status">Candidate clusters will appear here after discovery.</div>
           <div id="candidate-list" class="candidate-list" hidden></div>
           <label for="cluster-add-prefix-input" id="cluster-add-prefix-label" hidden>Add repeater prefixes within this cluster</label>
           <input id="cluster-add-prefix-input" type="text" hidden placeholder="48, 93">
@@ -4130,6 +4166,28 @@
       return String(node.public_key || node.key || `${node.shortId}@${node.lat},${node.lon}`).toLowerCase();
     }
 
+    // Headline plus one line per caveat (#134). Counts are ours and the text is
+    // built from constants, so there is no user input to escape here; keep it
+    // that way if a node name ever needs to appear in one of these lines.
+    function renderClusterStatus(headlineHtml, notes) {
+      const lines = notes.map((note) => `
+        <p class="hint${note.caveat ? " is-caveat" : ""}">
+          <b>${note.count}</b><span>${note.text}</span>
+        </p>`).join("");
+      clusterStatus.innerHTML = `<p class="cluster-headline">${headlineHtml}</p>${lines}`;
+    }
+
+    // Beside a name there is room for a tag, not a sentence. The full reason is
+    // the title, and the cluster status says what each of them means (#134).
+    const SHORT_REASONS = {
+      "duplicate prefix": "dup",
+      "proven-link (range only)": "range",
+      "outside 1st-hop hull": "outside"
+    };
+    function shortReason(reason) {
+      return SHORT_REASONS[reason] || reason;
+    }
+
     function syncClusterEditorFromLockedRegion() {
       if (!currentResolvedContext) {
         setClusterEditorVisible(false);
@@ -4157,12 +4215,19 @@
         const weight = activeById.has(id) ? activeById.get(id) : (weightByPrefix.get(pfx) ?? 1);
         const row = document.createElement("div");
         row.className = checked ? "observer-row" : "observer-row is-excluded";
+        // Distance to the locked cluster's centre, computed here rather than
+        // stored: a dragged observer (#33b) has to move this number with it.
+        // It is the figure dedupeByPrefix() falls back to when proven links do
+        // not separate a prefix (#54), and until now the list never showed it.
+        const centreKm = lockedRegionCentroid ? haversineKm(lockedRegionCentroid, node) : null;
+        const facts = [];
+        if (Number.isFinite(centreKm)) facts.push(`centre ${centreKm.toFixed(1)} km`);
+        if (Number.isFinite(node.provenRadiusKm)) facts.push(`reach ${node.provenRadiusKm.toFixed(1)} km`);
         row.innerHTML = `
           <input type="checkbox" data-nodeid="${id}" data-prefix="${pfx}" ${checked ? "checked" : ""}>
           <div class="observer-copy">
-            <strong>${pfx} · ${node.adv_name || node.name || "Observer"}</strong>
-            <span>${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}${Number.isFinite(node.provenRadiusKm) ? ` · ${node.provenRadiusKm.toFixed(1)} km` : ""}</span>
-            ${reason ? `<span class="${reasonClass}">${reason}</span>` : ""}
+            <strong><span class="observer-name">${pfx} · ${node.adv_name || node.name || "Observer"}</span>${reason ? `<span class="${reasonClass}" title="${reason}">${shortReason(reason)}</span>` : ""}</strong>
+            <span>${facts.join(" · ")}</span>
           </div>
           <input class="observer-weight" type="number" min="0" step="0.05" value="${weight.toFixed(2)}" data-nodeid="${id}" data-prefix="${pfx}">
         `;
@@ -4470,44 +4535,66 @@
       candidateList.hidden = true;
       candidateList.innerHTML = "";
       changeClusterButton.hidden = false;
-      const hullNote = hullExcluded.length
-        ? ` ${hullExcluded.length} 2nd-hop node${hullExcluded.length === 1 ? "" : "s"} outside the 1st-hop hull excluded — review in the list below.`
-        : "";
-      // Same rule as the caps and filters below: nothing is decided silently.
-      // The nearest-the-centre pick is a guess, not evidence (#54), so it is
-      // named whenever it actually decided a prefix.
-      const dupGuessNote = dupCentroidDecided
-        ? ` Proven links did not separate ${dupCentroidDecided} prefix${dupCentroidDecided === 1 ? "" : "es"}, so the node nearest the cluster centre was kept. That pick biases the estimate toward the centre.`
-        : "";
-      const dedupNote = dupRemoved.length
-        ? ` Auto-removed ${dupRemoved.length} duplicate-prefix node${dupRemoved.length === 1 ? "" : "s"}, review in the list below.${dupGuessNote}`
-        : "";
-      // Never let a coverage cap look like "there was nothing more" (#38).
-      const linkCapNote = linkFetchSkipped
-        ? ` Proven links fetched for the first ${PROVEN_LINK_NODE_BUDGET} nodes only — ${linkFetchSkipped} not queried.`
-        : "";
-      // Same rule for the plausibility filter: a dropped link is reported, never
-      // silent (#61).
-      // One consolidated clause list rather than a separate sentence per rule.
-      // This line already carries the hull and dedupe notes, and three more
-      // appended sentences read as a wall. Nothing is capped silently (#38,
-      // #61, #62).
-      const radiusNotes = [];
+      // Every cap, filter and fallback is reported — nothing is decided
+      // silently (#38, #54, #61, #62, #85). These used to be concatenated into
+      // one paragraph, which in a 300px column ran to eight sentences of prose
+      // that could not be scanned (#134). Same facts, one per line, count
+      // first. `caveat` marks the ones that are inference rather than
+      // measurement, so a guess never reads as evidence.
+      const notes = [];
+      if (hullExcluded.length) {
+        notes.push({
+          count: hullExcluded.length,
+          text: `2nd-hop node${hullExcluded.length === 1 ? "" : "s"} outside the 1st-hop hull, excluded — review below`,
+          caveat: true
+        });
+      }
+      if (dupRemoved.length) {
+        notes.push({
+          count: dupRemoved.length,
+          text: `duplicate-prefix node${dupRemoved.length === 1 ? "" : "s"} removed — review below`,
+          caveat: true
+        });
+      }
+      if (dupCentroidDecided) {
+        notes.push({
+          count: dupCentroidDecided,
+          text: `prefix${dupCentroidDecided === 1 ? "" : "es"} decided by distance to centre, not by links. Biases the estimate inward.`,
+          caveat: true
+        });
+      }
+      if (linkFetchSkipped) {
+        notes.push({
+          count: linkFetchSkipped,
+          text: `node${linkFetchSkipped === 1 ? "" : "s"} not queried for proven links — first ${PROVEN_LINK_NODE_BUDGET} only`,
+          caveat: true
+        });
+      }
       if (implausibleLinksDropped) {
-        radiusNotes.push(`${implausibleLinksDropped} link${implausibleLinksDropped === 1 ? "" : "s"} too long for one hop (over ${MAX_PLAUSIBLE_LINK_KM} km)`);
+        notes.push({
+          count: implausibleLinksDropped,
+          text: `link${implausibleLinksDropped === 1 ? "" : "s"} over ${MAX_PLAUSIBLE_LINK_KM} km dropped, too long for one hop`
+        });
       }
       if (outboundLinksExcluded) {
-        radiusNotes.push(`${outboundLinksExcluded} outbound-only link${outboundLinksExcluded === 1 ? "" : "s"} excluded`);
+        notes.push({
+          count: outboundLinksExcluded,
+          text: `outbound-only link${outboundLinksExcluded === 1 ? "" : "s"} excluded`
+        });
       }
       if (observersWithoutReceiveQuorum) {
-        radiusNotes.push(`${observersWithoutReceiveQuorum} observer${observersWithoutReceiveQuorum === 1 ? "" : "s"} had under ${RECEIVE_QUORUM} inbound links, so used all directions`);
+        notes.push({
+          count: observersWithoutReceiveQuorum,
+          text: `observer${observersWithoutReceiveQuorum === 1 ? "" : "s"} under ${RECEIVE_QUORUM} inbound links, used all directions`
+        });
       }
-      const implausibleNote = radiusNotes.length ? ` Coverage radii: ${radiusNotes.join("; ")}.` : "";
-      // Which observers got a roof height, and which stay on the constant.
-      const roofNote = roofs.answered
-        ? ` Antenna heights: ${roofs.onRoof} of ${roofs.answered} observers have a building within ${ROOF_SEARCH_M} m per 3D BAG and use its roof, the rest assume ${REPEATER_ANTENNA_HEIGHT_M} m.`
-        : ` Antenna heights: 3D BAG did not answer, all observers assume ${REPEATER_ANTENNA_HEIGHT_M} m.`;
-      clusterStatus.textContent = `Cluster near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}: ${uniquePrefixCount(dedupedNodes)} observers active.${hullNote}${dedupNote}${linkCapNote}${implausibleNote}${roofNote}`;
+      notes.push(roofs.answered
+        ? { count: `${roofs.onRoof}/${roofs.answered}`, text: `antenna heights from 3D BAG roofs, the rest assume ${REPEATER_ANTENNA_HEIGHT_M} m` }
+        : { count: "0", text: `antenna heights from 3D BAG — it did not answer, all assume ${REPEATER_ANTENNA_HEIGHT_M} m`, caveat: true });
+      renderClusterStatus(
+        `<strong>${uniquePrefixCount(dedupedNodes)} observers active</strong> near ${centroid.lat.toFixed(3)}, ${centroid.lon.toFixed(3)}.`,
+        notes
+      );
       syncClusterEditorFromLockedRegion();
       setDiscoveryCollapsed(true);
       renderCandidateMap([]);
