@@ -195,9 +195,10 @@ A global `[hidden] { display: none !important }` rule exists. Toggle visibility 
 Prepend an entry to `web-standalone/changelog.json` in the words of the person using the tool,
 not the words of the code. It feeds the "What's new" panel.
 
-**One or two sentences, no more.** The panel is a narrow column people skim, not a place to
-explain the reasoning — that is what the commit message and the issue are for. Say what changed
-and why it matters to someone using the tool, and stop.
+**One or two lines, no more** — roughly 120 characters, not 120 words. The panel is a narrow
+column people skim, so two long sentences already render as five or six lines. The reasoning
+belongs in the commit message and the issue. Say what changed and why it matters to someone
+using the tool, and stop.
 
 ---
 

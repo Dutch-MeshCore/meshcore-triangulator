@@ -1,45 +1,57 @@
 [
   {
+    "id": "2026-09-10-plain-scroll-zooms",
+    "date": "2026-09-10",
+    "title": "Scrolling zooms the map again",
+    "body": "On a desktop the wheel zooms the map straight away; holding cmd or ctrl is only needed on a phone, where the page has to scroll past it."
+  },
+  {
+    "id": "2026-09-10-dmc-house-style",
+    "date": "2026-09-10",
+    "title": "The triangulator looks like the rest of DutchMeshCore",
+    "body": "The triangulator now wears the shared DMC house style, and has a light theme for the first time — switch it top right."
+  },
+  {
     "id": "2026-09-10-step-1-starts-active",
     "date": "2026-09-10",
     "title": "Step 1 is ready the moment the page opens",
-    "body": "Step 1 sat greyed out until you typed a prefix, which also made the Spam incident button unclickable in exactly the case it is for. It is active from the first paint."
+    "body": "Step 1 is ready the moment the page opens, instead of greyed out until you type."
   },
   {
     "id": "2026-09-10-map-controls-with-the-map",
     "date": "2026-09-10",
     "title": "The map's buttons sit with the map",
-    "body": "Clear Map, the layer switches and the relief slider sat at the bottom of the left column, nearly a thousand pixels below the map they act on; they are now a strip along the top of the map. Steps fold shut and show what they hold, so on a phone the map is no longer three screens down."
+    "body": "The map's buttons moved from the bottom of the column to a strip on the map. Finished steps fold shut."
   },
   {
     "id": "2026-09-10-shorter-observer-list",
     "date": "2026-09-10",
     "title": "The observer list says what you are choosing on",
-    "body": "Observer rows swapped coordinates to five decimals for the number you actually choose on: how far each repeater is from the centre of the cluster. The cluster summary went from one paragraph to six scannable lines, with a mark on the two that are a guess rather than a measurement."
+    "body": "Observer rows now show how far each repeater is from the cluster centre, which is what the automatic pick is based on."
   },
   {
     "id": "2026-09-10-two-ways-into-step-1",
     "date": "2026-09-10",
     "title": "Two ways to start, and second-hop out of the way",
-    "body": "Loading a spam-detector incident is now one of two buttons at the top of Step 1 instead of a fold above the prefix field, and it fills the prefixes in so you can still change them. Second-hop prefixes fold away until you ask for them."
+    "body": "Loading a spam-detector incident is now a tab at the top of Step 1. Second-hop prefixes fold away until you need them."
   },
   {
     "id": "2026-09-10-step-1-reads-properly",
     "date": "2026-09-10",
     "title": "Step 1 stops reading as one grey block",
-    "body": "Every line in Step 1 was the same colour and size, with the explanation under a field brighter than the label above it. Field names now lead, help sits quietly underneath, and what the tool says back gets its own line."
+    "body": "Step 1 reads properly now: field names lead and their explanation sits quietly underneath."
   },
   {
     "id": "2026-09-10-add-prefix-adds-one-observer",
     "date": "2026-09-10",
     "title": "Adding a prefix adds one observer, not every node that carries it",
-    "body": "Typing a prefix into Add Prefixes In Locked Cluster ticked every node carrying it, so an ambiguous prefix counted twice from two places at once. It now adds one, and says when there was more than one to choose from."
+    "body": "Adding a prefix adds one observer, not every node that happens to carry it."
   },
   {
     "id": "2026-09-10-done-resolving-applies",
     "date": "2026-09-10",
     "title": "Finishing on the map applies what you picked",
-    "body": "Swapping which node stands for a prefix on the map only ticked a box in a list you could not see from the map. “Done resolving” now applies the picks and says so."
+    "body": "“Done resolving” now applies the picks you made on the map, instead of leaving them in a list you cannot see."
   },
   {
     "id": "2026-09-07-antenna-height-from-the-roof",

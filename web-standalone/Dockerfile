@@ -8,6 +8,8 @@ LABEL org.opencontainers.image.source="https://github.com/khagele/meshcore-trian
 
 WORKDIR /app
 COPY server.py spamdetector.py bag3d.py index.html changelog.json ./
+# Shared DMC web fonts (DutchMeshCore-Branding); the page @font-face's these.
+COPY assets/ ./assets/
 
 # Inside the container we must bind all interfaces; restrict exposure when
 # publishing the port instead (e.g. -p 127.0.0.1:8000:8000).
