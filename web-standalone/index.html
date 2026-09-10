@@ -4648,25 +4648,52 @@
         clusterEditorStatus.textContent = "Enter one or more repeater prefixes that exist inside the locked cluster.";
         return;
       }
-      const found = new Set();
+      // One prefix stands for ONE observer. The editor lists every candidate a
+      // prefix resolved to, so ticking each matching row let a single prefix
+      // contribute twice, from two positions that can be tens of km apart, and
+      // pull the estimate between them. Add the same node dedupeByPrefix() kept
+      // and leave the rest to "Resolve on map", which is where a swap belongs.
+      const rowsByPrefix = new Map();
       observerEditor.querySelectorAll(".observer-row").forEach((row) => {
         const checkbox = row.querySelector('input[type="checkbox"]');
+        if (!checkbox || !row.querySelector(".observer-weight")) return;
+        const prefix = checkbox.dataset.prefix;
+        if (!rowsByPrefix.has(prefix)) rowsByPrefix.set(prefix, []);
+        rowsByPrefix.get(prefix).push(row);
+      });
+      const rowNodeId = (row) => row.querySelector('input[type="checkbox"]').dataset.nodeid;
+      const found = new Set();
+      const ambiguous = [];
+      prefixes.forEach((prefix) => {
+        const rows = rowsByPrefix.get(prefix);
+        if (!rows || !rows.length) return;
+        found.add(prefix);
+        // Already represented — a pick in force is the operator's, not ours.
+        if (rows.some((row) => row.querySelector('input[type="checkbox"]').checked)) return;
+        // A proven-link support node is range-only and never represents a
+        // prefix, so it is the last resort rather than the first row.
+        const real = rows.filter((row) => observerExclusionReasons.get(rowNodeId(row)) !== "proven-link (range only)");
+        const pool = real.length ? real : rows;
+        const row = pool.find((candidate) => !observerExclusionReasons.has(rowNodeId(candidate))) || pool[0];
+        const checkbox = row.querySelector('input[type="checkbox"]');
         const weightInput = row.querySelector(".observer-weight");
-        if (!checkbox || !weightInput) {
-          return;
+        checkbox.checked = true;
+        if (!Number.parseFloat(weightInput.value)) {
+          weightInput.value = "1.00";
         }
-        if (prefixes.includes(checkbox.dataset.prefix)) {
-          checkbox.checked = true;
-          if (!Number.parseFloat(weightInput.value)) {
-            weightInput.value = "1.00";
-          }
-          found.add(checkbox.dataset.prefix);
-        }
+        if (pool.length > 1) ambiguous.push(`${prefix} (${pool.length} candidates)`);
       });
       const missing = prefixes.filter((prefix) => !found.has(prefix));
-      clusterEditorStatus.textContent = missing.length
-        ? `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}. Not found here: ${missing.join(", ")}.`
-        : `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}.`;
+      // Which candidate is the real observer is not knowable here (#85), so the
+      // choice is named rather than presented as settled.
+      const ambiguousNote = ambiguous.length
+        ? ` More than one node carries ${ambiguous.join(", ")} — the automatic pick was added; swap it with “Resolve on map”.`
+        : "";
+      clusterEditorStatus.textContent = (found.size
+        ? `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}.`
+        : "None of those prefixes are inside the locked cluster.")
+        + (missing.length ? ` Not found here: ${missing.join(", ")}.` : "")
+        + ambiguousNote;
       updateApplyButtonState();
     });
     // Enable Apply only when the editor differs from the last applied state.

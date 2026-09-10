@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-add-prefix-adds-one-observer",
+    "date": "2026-09-10",
+    "title": "Adding a prefix adds one observer, not every node that carries it",
+    "body": "Typing a prefix into Add Prefixes In Locked Cluster ticked every node with that prefix. When a prefix resolved to more than one node, both went into the estimate, from positions that can be tens of km apart, and pulled the answer between them. It now adds the same node the automatic de-duplication kept, says when there was more than one to choose from, and leaves the swap to Resolve on map. A prefix you already picked yourself is left alone."
+  },
+  {
     "id": "2026-09-10-done-resolving-applies",
     "date": "2026-09-10",
     "title": "Finishing on the map applies what you picked",
