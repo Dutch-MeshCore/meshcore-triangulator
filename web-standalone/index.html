@@ -22,6 +22,9 @@
       --panel-border: rgba(143, 187, 201, 0.18);
       --text: #f3fbff;
       --muted: #9eb6c0;
+      /* Help text sits a step below --muted so a field's label always reads
+         louder than the sentence explaining it (#132). */
+      --faint: #6b8794;
       --accent: #00b894;
       --accent-2: #ff9f43;
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
@@ -415,11 +418,72 @@
     }
     .step-panel .import-row button { margin-top: 0; }
     /* Tighter help text to keep the step panels compact. */
+    /* Three roles under a field, and they have to look like three things
+       (#132). Before this they were all one colour within a pixel of each
+       other, and p.hint inherited --text at .85 opacity, which rendered
+       BRIGHTER than the --muted label above it: the explanation outshouted
+       the field it explained.
+
+       .field-help  static explanation. Never overwritten, so it is still
+                    there after you type. Quietest of the three.
+       p.hint       what the app says back. Monospaced with an accent rule so
+                    it cannot be mistaken for the next field's label, which is
+                    exactly what happened when "Parsed observers: ..." replaced
+                    the help text and sat flush against the label below. */
+    .step-panel p.field-help {
+      margin: 5px 0 0;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--faint);
+    }
+    .step-panel p.hint:empty {
+      display: none;
+    }
     .step-panel p.hint {
       margin: 6px 0 0;
-      font-size: 0.78rem;
-      line-height: 1.4;
-      opacity: 0.85;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--muted);
+      padding-left: 9px;
+      border-left: 2px solid var(--accent);
+    }
+    /* A caveat is not the same as a result (#54, #85). */
+    .step-panel p.hint.is-caveat {
+      border-left-color: var(--accent-2);
+    }
+    /* A field group needs air before the next one starts, or the reply line
+       still reads as the next label's opening words (#132). */
+    .step-panel p + label,
+    .step-panel p + .radius-row {
+      margin-top: 14px;
+    }
+    .step-panel .label-optional {
+      color: var(--faint);
+      font-weight: 400;
+      font-size: 0.94em;
+    }
+    /* An inline example of what to type, instead of the literal backticks
+       that used to ship as UI text. */
+    .step-panel .sample {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--muted);
+    }
+    /* Nothing styled links inside the panels, so the browser default #0000EE
+       landed on a dark teal card (#132). */
+    .step-panel a,
+    .utility-panel a {
+      color: var(--accent);
+      text-underline-offset: 2px;
+      text-decoration-color: rgba(0, 184, 148, 0.45);
+    }
+    .step-panel a:hover,
+    .utility-panel a:hover {
+      text-decoration-color: var(--accent);
     }
 
     .dot {
@@ -574,9 +638,10 @@
     .step-panel label,
     .utility-panel label {
       display: block;
-      color: var(--muted);
-      font-size: 0.84rem;
-      margin-bottom: 6px;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.845rem;
+      margin-bottom: 5px;
     }
 
     .source-panel input,
@@ -1456,20 +1521,30 @@
                 <input id="incident-input" type="text" value="" placeholder="attack URL or number" aria-label="Attack URL or number">
                 <button id="incident-load-button" type="button" class="button-secondary">Load</button>
               </div>
-              <p id="incident-status" class="hint">Entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a> become the first-hop prefixes, weighted by packets; then it finds the region.</p>
+              <p class="field-help">
+                Entry hops from <a href="https://mc-spamdetector.nl/" target="_blank" rel="noopener">mc-spamdetector.nl</a>
+                become the first-hop prefixes, weighted by packets; then it finds the region.
+              </p>
+              <p id="incident-status" class="hint"></p>
             </details>
-            <label for="prefix-input">First-hop prefixes — heard the source directly</label>
+            <label for="prefix-input">First-hop prefixes</label>
             <input id="prefix-input" type="text" value="" placeholder="db:30, 23, db11:12">
-            <p id="prefix-status" class="hint">`PREFIX` or `PREFIX:count` — 2/4/6 hex, comma-separated. Count = times heard (weight).</p>
-            <label for="prefix2-input">Second-hop prefixes — heard a first-hop relay (optional)</label>
+            <p class="field-help">
+              Repeaters that heard the source directly. <span class="sample">2C</span> or
+              <span class="sample">2C:4</span>, comma separated — 2, 4 or 6 hex, and the number is
+              how often it was heard.
+            </p>
+            <p id="prefix-status" class="hint"></p>
+            <label for="prefix2-input">Second-hop prefixes <span class="label-optional">optional</span></label>
             <input id="prefix2-input" type="text" value="" placeholder="a0:8, fc">
-            <p id="prefix2-status" class="hint">Weaker, wider clue. Down-weighted automatically.</p>
+            <p class="field-help">Heard a first-hop relay instead. Weaker and wider, so it counts for less.</p>
             <div class="radius-row">
               <label>2nd-hop km<input id="hop2-radius-input" type="number" min="1" max="200" step="1" value="10"></label>
               <label>Cluster km<input id="region-radius-input" type="number" min="1" max="200" step="1" value="12"></label>
             </div>
             <button id="discover-button" type="button">Find Best Matching Region</button>
-            <p id="discover-status" class="hint">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
+            <p class="field-help">Resolves the prefixes globally and picks the strongest geographic cluster.</p>
+            <p id="discover-status" class="hint"></p>
           </div>
         </section>
         <section class="step-panel is-locked" id="panel-cluster">
@@ -3977,7 +4052,7 @@
 
     function renderParsedClues(weightedPrefixes) {
       if (!weightedPrefixes.length) {
-        prefixStatus.textContent = "Step 1: enter observer prefixes. Use `PREFIX` or `PREFIX:VALUE`.";
+        prefixStatus.textContent = "";
       } else {
         prefixStatus.textContent = `Parsed observers: ${weightedPrefixes.map((item) => `${item.prefix}:${item.weight.toFixed(2).replace(/\.00$/, "")}`).join(", ")}`;
       }
@@ -4609,7 +4684,7 @@
 
     function clearMapState() {
       resetResolvedState(true);
-      discoverStatus.textContent = "Map cleared. Step 1: enter clues, then find candidate clusters.";
+      discoverStatus.textContent = "Map cleared.";
       renderParsedClues(parseWeightedPrefixes(prefixInput.value));
       updateWorkflowSteps("clues");
       syncControlStates();
@@ -4626,9 +4701,7 @@
         return;
       }
       resetResolvedState(true);
-      discoverStatus.textContent = weightedPrefixes.length
-        ? "Step 1: click “Find Best Matching Region” to resolve these clues."
-        : "Step 1: enter observer prefixes, then find candidate clusters.";
+      discoverStatus.textContent = "";
       updateWorkflowSteps("clues");
       syncControlStates();
     }
@@ -4740,8 +4813,8 @@
       const weightedPrefixes = parseWeightedPrefixes(prefixInput.value);
       renderParsedClues(weightedPrefixes);
       discoverStatus.textContent = weightedPrefixes.length
-        ? `Step 1: click “Find Best Matching Region” to resolve these clues with a ${getRegionRadiusKm().toFixed(0)} km cluster radius.`
-        : "Step 1: enter observer prefixes, then find candidate clusters.";
+        ? `Cluster radius set to ${getRegionRadiusKm().toFixed(0)} km for the next run.`
+        : "";
       updateWorkflowSteps("clues");
       syncControlStates();
     });

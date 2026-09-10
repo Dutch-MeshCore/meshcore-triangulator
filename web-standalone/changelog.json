@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-step-1-reads-properly",
+    "date": "2026-09-10",
+    "title": "Step 1 stops reading as one grey block",
+    "body": "Every line in Step 1 was the same colour and within a pixel of the same size, and the explanation under a field was actually brighter than the label above it. Field names now lead, their explanation sits quietly underneath and stays there after you type, and what the tool says back gets its own monospaced line with a green rule beside it. The link to the spam detector was rendering in the browser's default blue on a dark panel; it is readable now. The prompt under the search button no longer repeats the sentence directly above it."
+  },
+  {
     "id": "2026-09-10-add-prefix-adds-one-observer",
     "date": "2026-09-10",
     "title": "Adding a prefix adds one observer, not every node that carries it",
