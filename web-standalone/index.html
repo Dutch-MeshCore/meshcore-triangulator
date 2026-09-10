@@ -218,12 +218,19 @@
       opacity: var(--scan-opacity);
     }
     /* Everything the operator touches sits above the two overlays. */
-    .topbar,
     .shell,
     .intro-overlay,
     .loading-overlay {
       position: relative;
       z-index: 1;
+    }
+    /* The topbar has to outrank the shell, not tie with it: its dropdowns hang
+       down over the map strip, and at equal z-index the later element in the
+       document wins — so the strip's buttons cut straight through the theme
+       and What's new panels. */
+    .topbar {
+      position: relative;
+      z-index: 2;
     }
 
     /* Headings and the brand run in the display face, uppercased, with a hard
