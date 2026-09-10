@@ -1,39 +1,45 @@
 [
   {
+    "id": "2026-09-10-step-1-starts-active",
+    "date": "2026-09-10",
+    "title": "Step 1 is ready the moment the page opens",
+    "body": "Step 1 sat greyed out until you typed a prefix, which also made the Spam incident button unclickable in exactly the case it is for. It is active from the first paint."
+  },
+  {
     "id": "2026-09-10-map-controls-with-the-map",
     "date": "2026-09-10",
     "title": "The map's buttons sit with the map",
-    "body": "Clear Map, the layer switches and the relief slider lived at the bottom of the left column, below all three steps — nearly a thousand pixels under the map they act on, so turning off a layer meant scrolling the map out of sight. They are now a strip along the top of the map. Relief became a button that opens its slider, so the strip stays one line. The help and What's new buttons moved up to the bar at the top of the page. Every step can now be folded shut and shows what it holds when it is (Step 1 · 8 prefixes), and on a phone the observer list folds itself once you have an estimate, so the map is no longer three screens down."
+    "body": "Clear Map, the layer switches and the relief slider sat at the bottom of the left column, nearly a thousand pixels below the map they act on; they are now a strip along the top of the map. Steps fold shut and show what they hold, so on a phone the map is no longer three screens down."
   },
   {
     "id": "2026-09-10-shorter-observer-list",
     "date": "2026-09-10",
     "title": "The observer list says what you are choosing on",
-    "body": "Every row spent three lines on coordinates to five decimals, which is one-metre precision in a list where you pick between repeaters kilometres apart. Rows now show how far each one is from the centre of the cluster, which is the number the automatic pick is actually made on, next to its proven reach. The reason a row is unticked moved up beside the name as a short tag. Coordinates are still in the node's popup on the map. A row went from 60 to 42 pixels, so the whole column is about 350 pixels shorter. The cluster summary was one paragraph of six caveats; it is now six lines with the count in front, and the two that are a guess rather than a measurement are marked."
+    "body": "Observer rows swapped coordinates to five decimals for the number you actually choose on: how far each repeater is from the centre of the cluster. The cluster summary went from one paragraph to six scannable lines, with a mark on the two that are a guess rather than a measurement."
   },
   {
     "id": "2026-09-10-two-ways-into-step-1",
     "date": "2026-09-10",
     "title": "Two ways to start, and second-hop out of the way",
-    "body": "Loading a spam-detector incident was tucked into a fold above the prefix field, so the exception route opened the panel. It is now one of two buttons at the top of Step 1: type prefixes, or pick an incident. Loading one fills the prefix field and switches you back to it, with a line saying which incident the values came from, so you can still change them before searching. The second-hop field folds away until you ask for it, together with its own km setting, because most searches never use it. A shared link that carries second-hop prefixes opens that fold for you."
+    "body": "Loading a spam-detector incident is now one of two buttons at the top of Step 1 instead of a fold above the prefix field, and it fills the prefixes in so you can still change them. Second-hop prefixes fold away until you ask for them."
   },
   {
     "id": "2026-09-10-step-1-reads-properly",
     "date": "2026-09-10",
     "title": "Step 1 stops reading as one grey block",
-    "body": "Every line in Step 1 was the same colour and within a pixel of the same size, and the explanation under a field was actually brighter than the label above it. Field names now lead, their explanation sits quietly underneath and stays there after you type, and what the tool says back gets its own monospaced line with a green rule beside it. The link to the spam detector was rendering in the browser's default blue on a dark panel; it is readable now. The prompt under the search button no longer repeats the sentence directly above it."
+    "body": "Every line in Step 1 was the same colour and size, with the explanation under a field brighter than the label above it. Field names now lead, help sits quietly underneath, and what the tool says back gets its own line."
   },
   {
     "id": "2026-09-10-add-prefix-adds-one-observer",
     "date": "2026-09-10",
     "title": "Adding a prefix adds one observer, not every node that carries it",
-    "body": "Typing a prefix into Add Prefixes In Locked Cluster ticked every node with that prefix. When a prefix resolved to more than one node, both went into the estimate, from positions that can be tens of km apart, and pulled the answer between them. It now adds the same node the automatic de-duplication kept, says when there was more than one to choose from, and leaves the swap to Resolve on map. A prefix you already picked yourself is left alone."
+    "body": "Typing a prefix into Add Prefixes In Locked Cluster ticked every node carrying it, so an ambiguous prefix counted twice from two places at once. It now adds one, and says when there was more than one to choose from."
   },
   {
     "id": "2026-09-10-done-resolving-applies",
     "date": "2026-09-10",
     "title": "Finishing on the map applies what you picked",
-    "body": "Swapping which node stands for a prefix on the map only ticked a box in the Step 2 list; until you scrolled back and pressed Apply Inside Locked Cluster the map kept showing the old pick. “Done resolving” now applies the picks, along with any weight you changed, and says so. Leaving the cluster instead, with Choose Another Cluster or by switching to a rival region, still applies nothing."
+    "body": "Swapping which node stands for a prefix on the map only ticked a box in a list you could not see from the map. “Done resolving” now applies the picks and says so."
   },
   {
     "id": "2026-09-07-antenna-height-from-the-roof",
