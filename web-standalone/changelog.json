@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-step-1-starts-active",
+    "date": "2026-09-10",
+    "title": "Step 1 is ready the moment the page opens",
+    "body": "Step 1 sat greyed out until you typed a prefix, which also made the Spam incident button unclickable in exactly the case it is for. It is active from the first paint."
+  },
+  {
     "id": "2026-09-10-map-controls-with-the-map",
     "date": "2026-09-10",
     "title": "The map's buttons sit with the map",

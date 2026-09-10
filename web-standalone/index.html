@@ -1697,7 +1697,7 @@
   <main class="shell">
     <section class="panel">
       <div class="input-stack">
-        <section class="step-panel is-locked" id="panel-discovery">
+        <section class="step-panel" id="panel-discovery">
           <button class="step-head" type="button" aria-expanded="true" aria-controls="step-body-discovery">
             <span class="step-kicker">Step 1</span>
             <h3>Clues + Regions</h3>
@@ -2319,7 +2319,6 @@
       discoverButton.disabled = !hasClues;
       estimateButton.disabled = !hasHeatContext;
       terrainRescoreButton.disabled = !hasObserverEstimate;
-      panelDiscovery.classList.toggle("is-locked", !hasClues);
       panelCluster.classList.toggle("is-locked", !hasCandidates);
       panelTerrain.classList.toggle("is-locked", !hasRegion);
       if (shareButton) {
