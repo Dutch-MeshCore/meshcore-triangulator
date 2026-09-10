@@ -260,10 +260,10 @@
        accent stripe, not a repaint) so it still reads as "this page, but
        tied to the wider community". */
     .topbar {
-      /* Sticks beneath the family band, which owns top: 0 (#142). */
+      /* The only bar, so it owns the top (#143). */
       position: sticky;
-      top: var(--bar-h);
-      z-index: 2;
+      top: 0;
+      z-index: 30;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -282,71 +282,8 @@
        somewhere to be served from — that is still an open decision in the
        guide. Token names are this app's canonical ones (--text-muted,
        --surface-hover) where the reference uses the website's. */
-    .dmc-bar {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      height: var(--bar-h);
-      background: var(--bar-bg);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--border);
-    }
-    .dmc-bar-inner {
-      width: min(1200px, calc(100% - 32px));
-      margin: 0 auto;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .dmc-bar-brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      margin-right: auto;
-    }
-    .dmc-bar-logo {
-      width: 20px;
-      height: 20px;
-      display: block;
-      object-fit: cover;
-      border-radius: 5px;
-      border: 1px solid var(--border-strong);
-    }
-    .dmc-bar-name {
-      font-family: var(--font-head);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-size: 0.68rem;
-      line-height: 1;
-      color: var(--heading);
-      text-shadow: var(--heading-shadow);
-    }
-
-    /* The dropdown pattern the band's three controls share. */
+    /* The dropdown pattern the bar's three shared controls use. */
     .dd { position: relative; }
-    .dmc-bar .dd-trig {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      line-height: 1;
-      color: var(--text-muted);
-      background: var(--chip-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      margin: 0;
-    }
-    .dmc-bar .dd-trig:hover {
-      color: var(--text);
-      border-color: var(--accent);
-    }
-    .dmc-bar .dd-trig svg { width: 11px; height: 11px; fill: currentColor; }
     .dd-caret { font-size: 0.65rem; opacity: 0.7; }
     .dd-menu {
       position: absolute;
@@ -362,7 +299,7 @@
       z-index: 40;
     }
     .dd.open .dd-menu { display: block; }
-    .dmc-bar .dd-menu button {
+    .topbar .dd-menu button {
       display: flex;
       align-items: center;
       gap: 9px;
@@ -378,7 +315,7 @@
       border-radius: var(--radius);
       margin: 0;
     }
-    .dmc-bar .dd-menu button:hover { background: var(--surface-hover); }
+    .topbar .dd-menu button:hover { background: var(--surface-hover); }
     .dd-menu .dd-ico { width: 20px; text-align: center; }
     .dd-menu .chk { margin-left: auto; color: var(--accent); visibility: hidden; }
     .dd-menu button[aria-checked="true"] .chk { visibility: visible; }
@@ -442,13 +379,22 @@
     .dmc-apps-foot a:hover { text-decoration: underline; }
 
     @media (max-width: 768px) {
-      .dmc-bar-name { display: none; }
-      .dmc-bar .dd-trig .dd-txt { display: none; }
+      .topbar .dd-trig .dd-txt { display: none; }
+      /* "MeshCore Triangulator" plus five controls does not fit one row at
+         375px, and the logo beside it already says which family this is, so
+         the name shortens rather than the bar growing a third row (#143). */
+      .title-family { display: none; }
+      /* A caret next to an icon-only chip says nothing the chip does not; at
+         375px those three carets are the difference between the brand and the
+         controls sharing a row and the bar growing a third one. */
+      .topbar .dd-caret { display: none; }
+      .topbar { gap: 8px; }
+      .topbar-meta { gap: 5px; }
       .dmc-apps .dd-menu {
         position: fixed;
         left: 8px;
         right: 8px;
-        top: calc(var(--bar-h) + 6px);
+        top: calc(var(--nav-h) + 6px);
         width: auto;
         background: var(--menu-bg);
         backdrop-filter: none;
@@ -465,6 +411,8 @@
       background: linear-gradient(90deg, var(--red), var(--white) 50%, var(--blue));
     }
     .topbar-brand {
+      text-decoration: none;
+      color: inherit;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -474,13 +422,9 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, var(--red), var(--blue));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
+      object-fit: cover;
+      border: 1px solid var(--border-strong);
+      display: block;
       flex: 0 0 auto;
     }
     .topbar-title {
@@ -505,31 +449,68 @@
     .topbar-nav a:hover {
       color: var(--text);
     }
+    /* One control shape for the whole bar (#143). It ran three at once: 28px
+       icon buttons, mono chips with a caret, and an emoji at a third size —
+       the junk-drawer problem the map strip had, moved into the chrome. */
     .topbar-meta {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex: 0 0 auto;
     }
+    /* The family's controls and the app's own, told apart by a rule rather
+       than by being differently shaped. */
+    .topbar-meta .meta-rule {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 2px;
+      flex: 0 0 auto;
+    }
+    .topbar .dd-trig,
     .topbar-meta .is-icon {
-      width: 28px;
-      height: 28px;
-      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      line-height: 1;
-      font-size: 0.8rem;
+      gap: 5px;
+      height: 28px;
+      min-width: 28px;
+      padding: 0 8px;
+      margin: 0;
       border-radius: var(--radius);
       border: 1px solid var(--border);
-      background: var(--surface-hover);
+      background: var(--chip-bg);
       color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      line-height: 1;
       cursor: pointer;
     }
+    .topbar .dd-trig:hover,
     .topbar-meta .is-icon:hover {
-      background: var(--raised);
       color: var(--text);
+      border-color: var(--accent);
+      background: var(--chip-bg);
+      filter: none;
+    }
+    /* Icons carry currentColor, so they follow the theme and the hover state
+       instead of sitting there as OS emoji at their own size and hue. */
+    .topbar-meta .icon {
+      width: 14px;
+      height: 14px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .topbar .dd-trig svg.apps-icon {
+      width: 11px;
+      height: 11px;
+      fill: currentColor;
+      stroke: none;
     }
     /* The panel hangs off the topbar now, so it opens downward from the right
        edge rather than from a card in the column. */
@@ -537,22 +518,6 @@
       top: calc(100% + 10px);
       left: auto;
       right: 0;
-    }
-
-    .topbar-github {
-      flex: 0 0 auto;
-      border-radius: var(--radius);
-      padding: 6px 12px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      background: var(--surface-hover);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      text-decoration: none;
-    }
-    .topbar-github:hover {
-      background: var(--border);
-      color: var(--text);
     }
 
     .shell {
@@ -1556,8 +1521,8 @@
          just below the two sticky bars above it. --nav-h is measured, because
          the navbar wraps to two rows at some widths (#142). */
       position: sticky;
-      top: calc(var(--bar-h) + var(--nav-h) + 10px);
-      height: calc(100vh - var(--bar-h) - var(--nav-h) - 34px);
+      top: calc(var(--nav-h) + 10px);
+      height: calc(100vh - var(--nav-h) - 34px);
     }
 
     #map3d {
@@ -1911,7 +1876,10 @@
         min-height: 56vh;
       }
       .topbar {
-        padding: 10px 12px 10px 16px;
+        /* The extra 4px on the left was clearance for the vertical stripe that
+           used to sit beside the bar; without it the brand and the controls
+           share a row at 375px instead of missing it by a pixel. */
+        padding: 10px 12px;
         gap: 10px;
       }
       .topbar-nav {
@@ -1922,9 +1890,6 @@
       .topbar-nav {
         order: 3;
         flex-basis: 100%;
-      }
-      .topbar-github {
-        order: 2;
       }
       /* On a narrow screen the What's new panel is a sheet at the bottom of
          the viewport instead of a dropdown under the bell, whose position
@@ -2027,65 +1992,15 @@
     </div>
   </div>
   <div class="page-stripe" aria-hidden="true"></div>
-  <!-- The family band (#142). Cross-subdomain links, language and theme live
-       here and nowhere else; the navbar below keeps only what is this app's. -->
-  <div class="dmc-bar">
-    <div class="dmc-bar-inner">
-      <a class="dmc-bar-brand" href="https://dutchmeshcore.nl/">
-        <img class="dmc-bar-logo" src="assets/logo/dmc-logo.jpg" alt="">
-        <span class="dmc-bar-name">Dutch MeshCore</span>
-      </a>
-      <div class="dd dmc-apps" id="apps-dd">
-        <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Apps">
-          <svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.25"/><circle cx="6" cy="1.5" r="1.25"/><circle cx="10.5" cy="1.5" r="1.25"/><circle cx="1.5" cy="6" r="1.25"/><circle cx="6" cy="6" r="1.25"/><circle cx="10.5" cy="6" r="1.25"/><circle cx="1.5" cy="10.5" r="1.25"/><circle cx="6" cy="10.5" r="1.25"/><circle cx="10.5" cy="10.5" r="1.25"/></svg><span class="dd-txt">Apps</span><span class="dd-caret">&#9662;</span>
-        </button>
-        <div class="dd-menu" role="menu">
-          <div class="dmc-apps-grid">
-            <a class="dmc-app" href="https://dutchmeshcore.nl/"><span class="dmc-app-ico"><img src="assets/logo/dmc-logo.jpg" alt=""></span><span class="dmc-app-name">Community</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
-            <a class="dmc-app" href="https://toolbox.dutchmeshcore.nl/"><span class="dmc-app-ico">TB</span><span class="dmc-app-name">Toolbox</span><span class="dmc-app-host">toolbox</span></a>
-            <a class="dmc-app" href="https://observers.dutchmeshcore.nl/"><span class="dmc-app-ico">OB</span><span class="dmc-app-name">Observers</span><span class="dmc-app-host">observers</span></a>
-            <a class="dmc-app" href="https://triangulator.dutchmeshcore.nl/" aria-current="page"><span class="dmc-app-ico">TR</span><span class="dmc-app-name">Triangulator</span><span class="dmc-app-host">triangulator</span></a>
-            <a class="dmc-app" href="https://settings.dutchmeshcore.nl/"><span class="dmc-app-ico">ST</span><span class="dmc-app-name">Settings</span><span class="dmc-app-host">settings</span></a>
-            <a class="dmc-app" href="https://ota.dutchmeshcore.nl/"><span class="dmc-app-ico">OTA</span><span class="dmc-app-name">OTA</span><span class="dmc-app-host">ota</span></a>
-            <a class="dmc-app" href="https://portal.dutchmeshcore.nl/"><span class="dmc-app-ico">PT</span><span class="dmc-app-name">Portal</span><span class="dmc-app-host">portal</span></a>
-            <a class="dmc-app" href="https://dutchmeshcore.nl/firmware.html"><span class="dmc-app-ico">FW</span><span class="dmc-app-name">Firmware</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
-          </div>
-          <div class="dmc-apps-foot">
-            <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord &#8599;</a>
-            <a href="https://github.com/Dutch-MeshCore" target="_blank" rel="noopener">GitHub &#8599;</a>
-          </div>
-        </div>
-      </div>
-      <!-- English-only for now, but the band is meant to be the same control
-           set on every subdomain, so the picker is here rather than this
-           being the one app whose band is a control short (#142). -->
-      <div class="dd" id="lang-dd">
-        <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
-          <span id="lang-label">EN</span><span class="dd-caret">&#9662;</span>
-        </button>
-        <div class="dd-menu" role="menu">
-          <button type="button" role="menuitemradio" data-lang-opt="en" aria-checked="true">
-            <span class="dd-ico">&#127468;&#127463;</span> English <span class="chk">&#10003;</span>
-          </button>
-        </div>
-      </div>
-      <div class="dd" id="theme-dd">
-        <button class="dd-trig" type="button" id="theme-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Theme">
-          <span id="theme-icon">&#127769;</span><span class="dd-caret">&#9662;</span>
-        </button>
-        <div class="dd-menu" role="menu">
-          <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">&#10003;</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">&#10003;</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">&#10003;</span></button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- One bar, not two (#143). The guide's product bar is a band ABOVE the app
+       navbar, which stacks two chromes on a tool whose whole point is the map
+       below them. Same four things it prescribes — DMC brand, app switcher,
+       language, theme — merged into the app's own bar instead of above it. -->
   <div class="topbar">
-    <div class="topbar-brand">
-      <span class="topbar-mark">DMC</span>
-      <span class="topbar-title">MeshCore Triangulator</span>
-    </div>
+    <a class="topbar-brand" href="https://dutchmeshcore.nl/">
+      <img class="topbar-mark" src="assets/logo/dmc-logo.jpg" alt="Dutch MeshCore">
+      <span class="topbar-title"><span class="title-family">MeshCore </span>Triangulator</span>
+    </a>
     <nav class="topbar-nav">
       <!-- Not DMC subdomains, so not in the switcher — and MC-Radar is this
            app's data source, so both belong to the app (#142). -->
@@ -2093,16 +2008,62 @@
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
     <div class="topbar-meta">
-      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
+    <div class="dd dmc-apps" id="apps-dd">
+      <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Apps">
+        <svg class="apps-icon" viewBox="0 0 12 12" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.25"/><circle cx="6" cy="1.5" r="1.25"/><circle cx="10.5" cy="1.5" r="1.25"/><circle cx="1.5" cy="6" r="1.25"/><circle cx="6" cy="6" r="1.25"/><circle cx="10.5" cy="6" r="1.25"/><circle cx="1.5" cy="10.5" r="1.25"/><circle cx="6" cy="10.5" r="1.25"/><circle cx="10.5" cy="10.5" r="1.25"/></svg><span class="dd-txt">Apps</span><span class="dd-caret">&#9662;</span>
+      </button>
+      <div class="dd-menu" role="menu">
+        <div class="dmc-apps-grid">
+          <a class="dmc-app" href="https://dutchmeshcore.nl/"><span class="dmc-app-ico"><img src="assets/logo/dmc-logo.jpg" alt=""></span><span class="dmc-app-name">Community</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
+          <a class="dmc-app" href="https://toolbox.dutchmeshcore.nl/"><span class="dmc-app-ico">TB</span><span class="dmc-app-name">Toolbox</span><span class="dmc-app-host">toolbox</span></a>
+          <a class="dmc-app" href="https://observers.dutchmeshcore.nl/"><span class="dmc-app-ico">OB</span><span class="dmc-app-name">Observers</span><span class="dmc-app-host">observers</span></a>
+          <a class="dmc-app" href="https://triangulator.dutchmeshcore.nl/" aria-current="page"><span class="dmc-app-ico">TR</span><span class="dmc-app-name">Triangulator</span><span class="dmc-app-host">triangulator</span></a>
+          <a class="dmc-app" href="https://settings.dutchmeshcore.nl/"><span class="dmc-app-ico">ST</span><span class="dmc-app-name">Settings</span><span class="dmc-app-host">settings</span></a>
+          <a class="dmc-app" href="https://ota.dutchmeshcore.nl/"><span class="dmc-app-ico">OTA</span><span class="dmc-app-name">OTA</span><span class="dmc-app-host">ota</span></a>
+          <a class="dmc-app" href="https://portal.dutchmeshcore.nl/"><span class="dmc-app-ico">PT</span><span class="dmc-app-name">Portal</span><span class="dmc-app-host">portal</span></a>
+          <a class="dmc-app" href="https://dutchmeshcore.nl/firmware.html"><span class="dmc-app-ico">FW</span><span class="dmc-app-name">Firmware</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
+        </div>
+        <div class="dmc-apps-foot">
+          <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord &#8599;</a>
+          <a href="https://github.com/Dutch-MeshCore" target="_blank" rel="noopener">GitHub &#8599;</a>
+        </div>
+      </div>
+    </div>
+    <!-- English-only for now, but the band is meant to be the same control
+         set on every subdomain, so the picker is here rather than this
+         being the one app whose band is a control short (#142). -->
+    <div class="dd" id="lang-dd">
+      <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+        <span id="lang-label">EN</span><span class="dd-caret">&#9662;</span>
+      </button>
+      <div class="dd-menu" role="menu">
+        <button type="button" role="menuitemradio" data-lang-opt="en" aria-checked="true">
+          <span class="dd-ico">&#127468;&#127463;</span> English <span class="chk">&#10003;</span>
+        </button>
+      </div>
+    </div>
+    <div class="dd" id="theme-dd">
+      <button class="dd-trig" type="button" id="theme-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Theme">
+        <svg class="icon" id="theme-icon" viewBox="0 0 16 16" aria-hidden="true"></svg><span class="dd-caret">&#9662;</span>
+      </button>
+      <div class="dd-menu" role="menu">
+        <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">&#10003;</span></button>
+        <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">&#10003;</span></button>
+        <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">&#10003;</span></button>
+      </div>
+    </div>
+      <span class="meta-rule" aria-hidden="true"></span>
+      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4"/><path d="M6.2 6.1a1.85 1.85 0 1 1 2.2 2.2v1"/><path d="M8.4 11.2h.01"/></svg>
+      </button>
       <div class="whats-new">
         <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
-          <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.6a4 4 0 0 1 8 0c0 3 .9 4.2 1.3 4.6H2.7C3.1 10.8 4 9.6 4 6.6Z"/><path d="M6.6 13.2a1.6 1.6 0 0 0 2.8 0"/></svg><span id="whats-new-dot" class="whats-new-dot" hidden></span>
         </button>
         <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
           <div id="whats-new-list"></div>
         </div>
       </div>
-      <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
   <main class="shell">
@@ -6792,7 +6753,7 @@
     // One behaviour for all three: a trigger toggles, opening one closes the
     // others, and an outside click or Escape closes whatever is open.
     function closeBandDropdowns(except) {
-      document.querySelectorAll(".dmc-bar .dd.open").forEach((dd) => {
+      document.querySelectorAll(".topbar .dd.open").forEach((dd) => {
         if (dd === except) return;
         dd.classList.remove("open");
         const trigger = dd.querySelector(".dd-trig");
@@ -6800,7 +6761,7 @@
       });
     }
 
-    document.querySelectorAll(".dmc-bar .dd").forEach((dd) => {
+    document.querySelectorAll(".topbar .dd").forEach((dd) => {
       const trigger = dd.querySelector(".dd-trig");
       if (!trigger) return;
       trigger.addEventListener("click", (event) => {
@@ -6813,7 +6774,7 @@
     });
 
     document.addEventListener("click", (event) => {
-      if (event.target instanceof Element && event.target.closest(".dmc-bar .dd")) return;
+      if (event.target instanceof Element && event.target.closest(".topbar .dd")) return;
       closeBandDropdowns();
     });
     document.addEventListener("keydown", (event) => {
@@ -6828,7 +6789,13 @@
       const light = choice === "light" || (choice === "system" && systemLight && systemLight.matches);
       if (light) document.documentElement.setAttribute("data-theme", "light");
       else document.documentElement.removeAttribute("data-theme");
-      if (themeIcon) themeIcon.textContent = light ? "☀️" : "🌙";
+      // Sun and moon as paths, so they take currentColor and the hover state
+      // like every other control in the bar (#143).
+      if (themeIcon) {
+        themeIcon.innerHTML = light
+          ? '<circle cx="8" cy="8" r="3.2"/><path d="M8 1.4v1.6M8 13v1.6M2.3 2.3l1.2 1.2M12.5 12.5l1.2 1.2M1.4 8h1.6M13 8h1.6M2.3 13.7l1.2-1.2M12.5 3.5l1.2-1.2"/>'
+          : '<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8Z"/>';
+      }
       document.querySelectorAll("[data-theme-choice]").forEach((button) => {
         button.setAttribute("aria-checked", button.dataset.themeChoice === choice ? "true" : "false");
       });
