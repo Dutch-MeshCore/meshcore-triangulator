@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-plain-scroll-zooms",
+    "date": "2026-09-10",
+    "title": "Scrolling zooms the map again",
+    "body": "On a desktop the wheel zooms the map straight away; holding cmd or ctrl is only needed on a phone, where the page has to scroll past it."
+  },
+  {
     "id": "2026-09-10-dmc-house-style",
     "date": "2026-09-10",
     "title": "The triangulator looks like the rest of DutchMeshCore",

@@ -2743,6 +2743,24 @@
     function narrowScreen() {
       return window.matchMedia && window.matchMedia(NARROW_SCREEN).matches;
     }
+
+    // Wheel zooms outright on the two-column layout, and asks for a modifier
+    // only where the map shares the page's scroll path (#140).
+    function syncMapGestures() {
+      const handler = map3d && map3d.cooperativeGestures;
+      if (!handler) return;
+      if (narrowScreen()) handler.enable();
+      else handler.disable();
+    }
+
+    // Both, deliberately: the media query is the precise signal, but it does
+    // not fire under viewport emulation, and resize always does. The function
+    // is idempotent, so being called twice costs nothing.
+    if (window.matchMedia) {
+      const narrowQuery = window.matchMedia(NARROW_SCREEN);
+      if (narrowQuery.addEventListener) narrowQuery.addEventListener("change", syncMapGestures);
+    }
+    window.addEventListener("resize", syncMapGestures);
     function revealOnNarrow(element) {
       if (!element || !narrowScreen()) return;
       // Instant, not smooth: a smooth scroll is dropped when another one is
@@ -6305,11 +6323,14 @@
         style: "https://tiles.openfreemap.org/styles/liberty",
         center: [center.lon, center.lat],
         zoom: currentMatchedNodes.length ? 13 : 6.4, pitch: 0, bearing: 0,
-        // The map sits inside a scrolling page. Without this a swipe or a
-        // wheel over it pans or zooms the map and the page cannot be
-        // scrolled past it on a phone (#117). Two fingers pan, ctrl+wheel
-        // zooms, and MapLibre shows the hint itself.
-        cooperativeGestures: true,
+        // Only where the layout needs it (#140). On the narrow, stacked
+        // layout the map is full-width and sits in the page's scroll path, so
+        // without this a swipe over it pans the map and you can never scroll
+        // past it (#117). From 861px up the map is a sticky column of its own
+        // and the page scrolls beside it, so there is nothing to be trapped
+        // in — and holding cmd to zoom the tool's main surface is friction on
+        // every zoom. syncMapGestures() keeps this in step across a resize.
+        cooperativeGestures: narrowScreen(),
         // Expanded attribution covered a third of a 412 px map.
         attributionControl: { compact: narrowScreen() },
         // MapLibre caps pitch at 60 by default. 85 is the library ceiling and
@@ -6318,6 +6339,7 @@
         maxPitch: 85
       });
       map3d.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
+      syncMapGestures();
       // Compact attribution opens expanded until the first interaction, which
       // on a phone is the box over the map that compact was meant to avoid.
       // Start it folded; the "i" button opens it.
