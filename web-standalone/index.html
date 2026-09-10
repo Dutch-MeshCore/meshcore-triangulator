@@ -91,19 +91,18 @@
       --danger: var(--red);
       --danger-text: #ff8080;
 
-      /* Glass over glow. */
-      --surface:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 34%),
-        linear-gradient(180deg, rgba(22, 24, 29, 0.94), rgba(6, 7, 10, 0.95));
-      --surface-2: rgba(8, 10, 13, 0.80);
-      --surface-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 18px 40px rgba(0, 0, 0, 0.35);
-      --body-bg:
-        radial-gradient(circle at 18% 18%, rgba(223, 32, 32, 0.15), transparent 28%),
-        radial-gradient(circle at 82% 28%, rgba(25, 118, 232, 0.14), transparent 30%),
-        linear-gradient(180deg, #090b10 0%, #06070a 48%, #030304 100%);
-      --sheen-opacity: 0.15;
-      --grid-opacity: 0.28;
-      --scan-opacity: 0.11;
+      /* Flat surfaces (#144). The guide's signature is "glass over glow": a
+         sheen gradient on every panel over a red/blue-lit ground, with a 42px
+         grid and scanlines on top. That look belongs on a landing page; in a
+         dense tool it is four decorative layers behind the thing you came to
+         read. The brand stays in the colours, the tricolour and the type. */
+      --surface: #12151b;
+      --surface-2: #0e1117;
+      --surface-shadow: none;
+      --body-bg: none;
+      --sheen-opacity: 0;
+      --grid-opacity: 0;
+      --scan-opacity: 0;
 
       /* App-level surfaces the guide does not name. Defined in both roots so
          no rule below has to know which theme is running. Values sit on the
@@ -128,7 +127,9 @@
       --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
       --font-head: 'Aldrich', 'Segoe UI', system-ui, sans-serif;
       --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Fira Mono', monospace;
-      --heading-shadow: 0 3px 0 #000;
+      /* A hard 3px drop shadow reads as a game title, not as a section
+         heading in a tool (#144). */
+      --heading-shadow: none;
       --fs-sm: 12px;
       --fs-md: 14px;
       --fs-lg: 16px;
@@ -169,9 +170,8 @@
       --danger-text: #c43a3a;
 
       --surface: #ffffff;
-      --surface-2: #eef0f8;
-      --surface-shadow: 0 10px 26px rgba(20, 30, 60, 0.08);
-      /* Flat ground, and the two overlays switched off by their tokens. */
+      --surface-2: #f4f6fb;
+      --surface-shadow: none;
       --body-bg: none;
       --sheen-opacity: 0;
       --grid-opacity: 0;
@@ -248,14 +248,27 @@
        and What's new panels. */
     /* Headings and the brand run in the display face, uppercased, with a hard
        drop shadow that light mode drops (STYLE-GUIDE §3). */
-    h1, h2, h3,
-    .step-kicker,
+    /* The display face carries the brand, not every section heading (#144).
+       Uppercase Aldrich on each panel title made three shouted words per card;
+       panel titles are sentence-case body type, which is what a tool's chrome
+       looks like. */
     .topbar-title {
       font-family: var(--font-head);
       text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.06em;
       color: var(--heading);
-      text-shadow: var(--heading-shadow);
+    }
+    h1, h2, h3 {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--heading);
+    }
+    /* The step number is a label, so it keeps the small-caps treatment. */
+    .step-kicker {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
     code, kbd, samp, pre {
       font-family: var(--font-mono);
@@ -664,7 +677,6 @@
       display: none;
     }
     .controls-card .layer-chip {
-      padding: 6px 10px;
       font-size: 0.78rem;
     }
     /* The help and What's new buttons stay together at the right, and wrap
@@ -681,8 +693,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 28px;
       padding: 0;
       line-height: 1;
     }
@@ -803,9 +814,11 @@
     }
     .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
       background: color-mix(in srgb, var(--accent) 18%, transparent);
-      color: var(--text);
+      color: var(--accent-light);
       font-weight: 600;
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+      /* The tint alone says which one is on; the inset ring was one more edge
+         in a screen that had 37 of them (#144). */
+      box-shadow: none;
     }
     .step-panel .entry-tabs .entry-tab:hover {
       color: var(--text);
@@ -1150,19 +1163,32 @@
 
     /* Primary actions (the workflow buttons) carry the accent. */
     .source-panel button,
+    /* ── Three button roles, and nothing else (#144) ────────────────────
+       The app had 28 visible buttons drawn in 14 looks at 9 heights, with 37
+       bordered elements. Panels, buttons and chips all shouted at the same
+       volume, so nothing receded and the screen read as a pile.
+
+         primary    filled accent, ONE per panel, completes the step
+         secondary  outline, everything else you may do here
+         quiet      soft fill, NO border — map controls, chips, icons
+
+       The rule doing most of the work: a border is for a container, not for a
+       control. Quiet controls carry a fill instead and get their border back
+       on hover and focus, so nothing looks dead. */
     .step-panel button {
       margin-top: 12px;
+      min-height: 38px;
       border: 0;
       border-radius: var(--radius);
-      padding: 10px 14px;
+      padding: 0 16px;
       font: inherit;
       font-weight: 600;
-      color: var(--bg);
+      color: #ffffff;
       background: var(--accent);
       cursor: pointer;
     }
     .source-panel button:hover,
-    .step-panel button:hover { filter: brightness(1.06); }
+    .step-panel button:hover { filter: brightness(1.08); }
 
     /* Utility actions (reset / view switches) are quiet ghost buttons. */
     .utility-panel button,
@@ -1194,21 +1220,59 @@
       margin-top: 12px;
     }
 
+    /* Secondary: outline, no fill. */
     .button-secondary,
     .step-panel button.button-secondary {
-      background: var(--chip-bg);
+      background: transparent;
       color: var(--text);
-      border: 1px solid var(--raised);
+      border: 1px solid var(--border);
+      font-weight: 500;
     }
+    .button-secondary:hover,
     .step-panel button.button-secondary:hover {
-      background: var(--raised);
+      background: var(--surface-hover);
+      border-color: var(--border-strong);
+      filter: none;
     }
 
+    /* Quiet: a fill and no border at all. */
     .button-muted,
-    .step-panel button.button-muted {
-      background: var(--surface-hover);
+    .step-panel button.button-muted,
+    .controls-card .layer-chip,
+    .topbar .dd-trig,
+    .topbar-meta .is-icon {
+      min-height: 28px;
+      height: 28px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: var(--chip-bg);
       color: var(--text-muted);
-      border: 1px solid var(--border);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .button-muted:hover,
+    .step-panel button.button-muted:hover,
+    .controls-card .layer-chip:hover,
+    .topbar .dd-trig:hover,
+    .topbar-meta .is-icon:hover {
+      background: var(--raised);
+      border-color: var(--border);
+      color: var(--text);
+      filter: none;
+    }
+    /* A toggle that is on reads as active through a tint of the accent, which
+       does not compete with a real primary action. */
+    .controls-card .layer-chip[aria-pressed="true"],
+    .button-muted[aria-pressed="true"] {
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--accent-light);
+      border-color: transparent;
+    }
+    .controls-card .layer-chip[aria-pressed="true"]:hover,
+    .button-muted[aria-pressed="true"]:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      color: var(--accent-light);
     }
 
     /* Focus visibility + disabled states (accessibility polish). */
@@ -1388,8 +1452,13 @@
       align-items: center;
       padding: 5px 8px;
       border-radius: var(--radius);
+      /* A row in a list is not a separate object, and fourteen of them each
+         drawing an edge is most of why the panel read as a pile (#144). */
       background: var(--surface-hover);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      border: 1px solid transparent;
+    }
+    .observer-row:hover {
+      border-color: var(--border);
     }
 
     .cluster-status .cluster-headline {
@@ -2106,7 +2175,7 @@
               <label for="incident-input">Or paste an attack URL or number</label>
               <div class="import-row">
                 <input id="incident-input" type="text" value="" placeholder="2047" aria-label="Attack URL or number">
-                <button id="incident-load-button" type="button" class="button-secondary">Load</button>
+                <button id="incident-load-button" type="button">Load</button>
               </div>
               <p id="incident-status" class="hint"></p>
             </div>
@@ -2156,7 +2225,7 @@
           <div id="candidate-list" class="candidate-list" hidden></div>
           <label for="cluster-add-prefix-input" id="cluster-add-prefix-label" hidden>Add repeater prefixes within this cluster</label>
           <input id="cluster-add-prefix-input" type="text" hidden placeholder="48, 93">
-          <button id="add-cluster-prefixes-button" type="button" hidden>Add Prefixes In Locked Cluster</button>
+          <button id="add-cluster-prefixes-button" type="button" class="button-secondary" hidden>Add Prefixes In Locked Cluster</button>
           <div id="observer-editor" class="observer-editor" hidden></div>
           <button id="apply-cluster-weights-button" type="button" hidden>Apply Inside Locked Cluster</button>
           <p id="cluster-editor-status" hidden>Only resolved observers inside the locked cluster can be edited here.</p>
@@ -2188,7 +2257,7 @@
            above the map because the whole column does. -->
       <div class="controls-card">
         <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
-        <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
+        <button id="manual-mode-button" type="button" class="button-muted" aria-pressed="false" hidden>Resolve on map</button>
         <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
           <span class="layer-chips-label">Show</span>
           <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
@@ -2209,7 +2278,7 @@
           </div>
         </div>
         <div class="controls-meta">
-          <button id="share-button" type="button" class="button-secondary">Share</button>
+          <button id="share-button" type="button" class="button-muted">Share</button>
         </div>
         <!-- Full-width rows last, so they wrap below the button row. -->
         <p id="share-status" class="share-status" role="status" hidden></p>
