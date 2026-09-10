@@ -16,18 +16,98 @@
     [hidden] {
       display: none !important;
     }
+    /* ── DMC house style (#139) ──────────────────────────────────────────
+       Tokens, names and values from DutchMeshCore-Branding/STYLE-GUIDE.md.
+       Its first principle: raw hex lives ONLY in these :root blocks, and
+       every rule below consumes a var(). That is what keeps dark and light
+       in step, so resist reaching for a literal further down. */
+    @font-face {
+      font-family: 'Aldrich';
+      src: url('assets/fonts/aldrich-v22-latin-400.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'IBM Plex Sans';
+      src: url('assets/fonts/ibm-plex-sans-latin-var.woff2') format('woff2-variations');
+      font-weight: 100 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('assets/fonts/ibm-plex-mono-latin-400.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('assets/fonts/ibm-plex-mono-latin-600.woff2') format('woff2');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
-      --bg: #08141b;
-      --panel: rgba(7, 25, 35, 0.88);
-      --panel-border: rgba(143, 187, 201, 0.18);
-      --text: #f3fbff;
-      --muted: #9eb6c0;
-      /* Help text sits a step below --muted so a field's label always reads
-         louder than the sentence explaining it (#132). */
-      --faint: #6b8794;
-      --accent: #00b894;
-      --accent-2: #ff9f43;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      color-scheme: dark;
+
+      /* Brand constants — identical in both themes. */
+      --red: #df2020;
+      --white: #f4f4f5;
+      --blue: #1976e8;
+      --green: #3ecf8e;
+      --yellow: #f5c542;
+
+      /* Dark palette. */
+      --bg: #060709;
+      --text: #e9edf4;
+      --text-muted: #b9c1cf;
+      --text-faint: #6b7480;
+      --heading: #ffffff;
+      --link: #61a8ff;
+      --accent: #1976e8;
+      --accent-light: #74adff;
+      --accent-strong: #93bfff;
+      --border: rgba(255, 255, 255, 0.14);
+      --border-strong: rgba(255, 255, 255, 0.22);
+      --surface-hover: rgba(255, 255, 255, 0.055);
+      --code-bg: rgba(0, 0, 0, 0.38);
+
+      /* Semantic state — used for meaning, never the raw brand tokens. */
+      --success: var(--green);
+      --warning: var(--yellow);
+      --danger: var(--red);
+      --danger-text: #ff8080;
+
+      /* Glass over glow. */
+      --surface:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 34%),
+        linear-gradient(180deg, rgba(22, 24, 29, 0.94), rgba(6, 7, 10, 0.95));
+      --surface-2: rgba(8, 10, 13, 0.80);
+      --surface-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 18px 40px rgba(0, 0, 0, 0.35);
+      --body-bg:
+        radial-gradient(circle at 18% 18%, rgba(223, 32, 32, 0.15), transparent 28%),
+        radial-gradient(circle at 82% 28%, rgba(25, 118, 232, 0.14), transparent 30%),
+        linear-gradient(180deg, #090b10 0%, #06070a 48%, #030304 100%);
+      --sheen-opacity: 0.15;
+      --grid-opacity: 0.28;
+      --scan-opacity: 0.11;
+
+      /* Type. */
+      --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      --font-head: 'Aldrich', 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Fira Mono', monospace;
+      --heading-shadow: 0 3px 0 #000;
+      --fs-sm: 12px;
+      --fs-md: 14px;
+      --fs-lg: 16px;
+      --fs-xl: 18px;
+
+      /* Geometry: one base radius for controls, one for large surfaces. */
+      --radius: 8px;
+      --radius-lg: 16px;
     }
 
     * {
@@ -37,12 +117,66 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      font-family: var(--font-sans);
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(0, 184, 148, 0.18), transparent 32%),
-        radial-gradient(circle at top right, rgba(255, 159, 67, 0.16), transparent 30%),
-        linear-gradient(180deg, #0a1b24 0%, #071118 100%);
+      /* Red glow top-left, blue top-right, over a dark fade. The house
+         "glass over glow" ground (#139); it was teal and orange. */
+      background-color: var(--bg);
+      background-image: var(--body-bg);
+      background-attachment: fixed;
+      position: relative;
+    }
+
+    /* Grid and scanlines (STYLE-GUIDE §6). Both sit under the content and
+       above the ground, and both go to zero opacity in light mode. */
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px);
+      background-size: 42px 42px;
+      -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, transparent 78%);
+      mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, transparent 78%);
+      opacity: var(--grid-opacity);
+    }
+    body::after {
+      background-image: repeating-linear-gradient(0deg,
+        rgba(255, 255, 255, 0.043),
+        rgba(255, 255, 255, 0.043) 1px,
+        transparent 1px,
+        transparent 4px);
+      mix-blend-mode: overlay;
+      opacity: var(--scan-opacity);
+    }
+    /* Everything the operator touches sits above the two overlays. */
+    .topbar,
+    .shell,
+    .intro-overlay,
+    .loading-overlay {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Headings and the brand run in the display face, uppercased, with a hard
+       drop shadow that light mode drops (STYLE-GUIDE §3). */
+    h1, h2, h3,
+    .step-kicker,
+    .topbar-title {
+      font-family: var(--font-head);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--heading);
+      text-shadow: var(--heading-shadow);
+    }
+    code, kbd, samp, pre {
+      font-family: var(--font-mono);
     }
 
     /* Full-width bar above everything: dutchmeshcore.nl branding + community
@@ -57,19 +191,17 @@
       flex-wrap: wrap;
       width: min(1200px, calc(100% - 32px));
       margin: 16px auto 0;
-      padding: 10px 16px 10px 20px;
-      border-radius: 12px;
-      background: #0b0d12;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
     }
-    .topbar-stripe {
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      border-radius: 12px 0 0 12px;
-      background: linear-gradient(180deg, #c8102e 0%, #c8102e 33%, #ffffff 33%, #ffffff 66%, #21468b 66%, #21468b 100%);
+    /* Every DMC surface opens with this band (STYLE-GUIDE §9): full width, in
+       normal flow, above the navbar. It was a 4px vertical bar beside the
+       topbar, which is the same idea in the wrong orientation. */
+    .page-stripe {
+      height: var(--stripe-h);
+      background: linear-gradient(90deg, var(--red), var(--white) 50%, var(--blue));
     }
     .topbar-brand {
       display: flex;
@@ -81,7 +213,7 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, #c8102e, #21468b);
+      background: linear-gradient(135deg, var(--red), var(--blue));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -101,11 +233,11 @@
       align-items: center;
       gap: 14px;
       font-size: 0.8rem;
-      color: var(--muted);
+      color: var(--text-muted);
       flex-wrap: wrap;
     }
     .topbar-nav a {
-      color: var(--muted);
+      color: var(--text-muted);
       text-decoration: none;
       white-space: nowrap;
     }
@@ -135,10 +267,10 @@
       gap: 6px 16px;
       padding: 12px 14px;
       min-width: 260px;
-      border-radius: 12px;
+      border-radius: var(--radius);
       background: rgba(7, 25, 35, 0.97);
       border: 1px solid rgba(143, 187, 201, 0.18);
-      box-shadow: var(--shadow);
+      box-shadow: var(--surface-shadow);
       z-index: 20;
     }
     .topbar-dropdown-menu a {
@@ -160,10 +292,10 @@
       justify-content: center;
       line-height: 1;
       font-size: 0.8rem;
-      border-radius: 9px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(255, 255, 255, 0.04);
-      color: var(--muted);
+      color: var(--text-muted);
       cursor: pointer;
     }
     .topbar-meta .is-icon:hover {
@@ -180,12 +312,12 @@
 
     .topbar-github {
       flex: 0 0 auto;
-      border-radius: 10px;
+      border-radius: var(--radius);
       padding: 6px 12px;
       font-weight: 600;
       font-size: 0.8rem;
       background: rgba(255, 255, 255, 0.04);
-      color: var(--muted);
+      color: var(--text-muted);
       border: 1px solid rgba(255, 255, 255, 0.12);
       text-decoration: none;
     }
@@ -205,10 +337,10 @@
     }
 
     .map-wrap {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--surface-shadow);
       backdrop-filter: blur(16px);
     }
 
@@ -228,7 +360,7 @@
       align-items: center;
       gap: 8px;
       padding: 8px 10px;
-      border-radius: 14px;
+      border-radius: var(--radius);
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
@@ -236,7 +368,7 @@
       font-size: 0.64rem;
       letter-spacing: 0.09em;
       text-transform: uppercase;
-      color: var(--faint);
+      color: var(--text-faint);
       margin-right: 2px;
     }
     /* Share is the one control here that is not about the map, so it sits at
@@ -258,14 +390,14 @@
       z-index: 20;
       width: 250px;
       padding: 10px 12px;
-      border-radius: 12px;
+      border-radius: var(--radius);
       background: rgba(7, 25, 35, 0.97);
       border: 1px solid rgba(143, 187, 201, 0.28);
-      box-shadow: var(--shadow);
+      box-shadow: var(--surface-shadow);
     }
     .controls-card button {
       margin: 0;
-      border-radius: 10px;
+      border-radius: var(--radius);
       padding: 7px 12px;
       font: inherit;
       font-weight: 600;
@@ -290,7 +422,7 @@
       flex: 1 0 100%;
       margin: 0;
       font-size: 0.74rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     .share-status.is-copied {
       color: var(--accent);
@@ -299,17 +431,17 @@
       flex: 1 0 100%;
       margin: 0;
       font-size: 0.74rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     .share-fallback input {
       width: 100%;
       margin-top: 4px;
       padding: 7px 9px;
-      border-radius: 9px;
+      border-radius: var(--radius);
       border: 1px solid rgba(0, 184, 148, 0.35);
       background: rgba(5, 15, 22, 0.9);
       color: var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-family: var(--font-mono);
       font-size: 0.72rem;
     }
 
@@ -362,7 +494,7 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--accent-2);
+      background: var(--warning);
     }
     .whats-new-panel {
       position: absolute;
@@ -375,10 +507,10 @@
       max-height: 360px;
       overflow-y: auto;
       padding: 12px 14px;
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       background: rgba(7, 25, 35, 0.97);
       border: 1px solid rgba(143, 187, 201, 0.18);
-      box-shadow: var(--shadow);
+      box-shadow: var(--surface-shadow);
     }
     .whats-new-entry {
       padding: 8px 0;
@@ -390,7 +522,7 @@
     .whats-new-entry time {
       display: block;
       font-size: 0.72rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     .whats-new-entry strong {
       display: block;
@@ -400,7 +532,7 @@
     .whats-new-entry p {
       margin: 0;
       font-size: 0.82rem;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.4;
     }
 
@@ -429,7 +561,7 @@
       gap: 4px;
       margin: 0;
       font-size: 0.72rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     .radius-row input { width: 100%; }
 
@@ -444,7 +576,7 @@
       grid-template-columns: 1fr 1fr;
       gap: 3px;
       padding: 3px;
-      border-radius: 12px;
+      border-radius: var(--radius);
       background: rgba(255, 255, 255, 0.045);
       border: 1px solid rgba(255, 255, 255, 0.08);
       margin-bottom: 14px;
@@ -453,14 +585,14 @@
     .step-panel .entry-tabs .entry-tab {
       margin: 0;
       border: 0;
-      border-radius: 9px;
+      border-radius: var(--radius);
       padding: 7px 6px;
       font-size: 0.78rem;
       font-weight: 500;
       background: transparent;
       /* --faint is for text that recedes under a label; a tab is a control you
          have to be able to read and click. */
-      color: var(--muted);
+      color: var(--text-muted);
       box-shadow: none;
     }
     .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
@@ -483,7 +615,7 @@
     .hop2-details summary {
       cursor: pointer;
       list-style: none;
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.8rem;
     }
     .hop2-details summary::-webkit-details-marker { display: none; }
@@ -498,7 +630,7 @@
 
     .step-panel select.import-select {
       width: 100%;
-      border-radius: 12px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(5, 15, 22, 0.9);
       color: var(--text);
@@ -531,7 +663,7 @@
       margin: 5px 0 0;
       font-size: 0.75rem;
       line-height: 1.45;
-      color: var(--faint);
+      color: var(--text-faint);
     }
     .step-panel p.hint:empty {
       display: none;
@@ -540,14 +672,14 @@
       margin: 6px 0 0;
       font-size: 0.72rem;
       line-height: 1.45;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      color: var(--muted);
+      font-family: var(--font-mono);
+      color: var(--text-muted);
       padding-left: 9px;
       border-left: 2px solid var(--accent);
     }
     /* A caveat is not the same as a result (#54, #85). */
     .step-panel p.hint.is-caveat {
-      border-left-color: var(--accent-2);
+      border-left-color: var(--warning);
     }
     /* A field group needs air before the next one starts, or the reply line
        still reads as the next label's opening words (#132). */
@@ -556,19 +688,19 @@
       margin-top: 14px;
     }
     .step-panel .label-optional {
-      color: var(--faint);
+      color: var(--text-faint);
       font-weight: 400;
       font-size: 0.94em;
     }
     /* An inline example of what to type, instead of the literal backticks
        that used to ship as UI text. */
     .step-panel .sample {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-family: var(--font-mono);
       font-size: 0.92em;
       background: rgba(255, 255, 255, 0.06);
       border-radius: 4px;
       padding: 1px 5px;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     /* Nothing styled links inside the panels, so the browser default #0000EE
        landed on a dark teal card (#132). */
@@ -592,7 +724,7 @@
 
     .node-meta {
       margin: 0;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.5;
       font-size: 0.93rem;
     }
@@ -607,9 +739,10 @@
     .step-panel,
     .utility-panel {
       padding: 14px 16px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--surface-shadow);
     }
 
     .utility-panel {
@@ -656,7 +789,7 @@
     .step-panel .step-head h3 { grid-area: title; }
     .step-panel .step-head .step-chev {
       grid-area: chevron;
-      color: var(--faint);
+      color: var(--text-faint);
       font-size: 0.7rem;
       transition: transform 0.15s ease;
     }
@@ -716,13 +849,13 @@
     .prefix-panel label {
       display: block;
       margin-bottom: 8px;
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.84rem;
     }
 
     .prefix-panel input {
       width: 100%;
-      border-radius: 12px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(5, 15, 22, 0.9);
       color: var(--text);
@@ -732,7 +865,7 @@
 
     .prefix-panel p {
       margin: 10px 0 0;
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.84rem;
       line-height: 1.45;
     }
@@ -756,10 +889,10 @@
 
     .workflow-step {
       padding: 10px 12px;
-      border-radius: 12px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(255, 255, 255, 0.03);
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.84rem;
       line-height: 1.4;
     }
@@ -801,7 +934,7 @@
     .step-panel input,
     .utility-panel input {
       width: 100%;
-      border-radius: 12px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(5, 15, 22, 0.9);
       color: var(--text);
@@ -814,11 +947,11 @@
     .step-panel button {
       margin-top: 12px;
       border: 0;
-      border-radius: 12px;
+      border-radius: var(--radius);
       padding: 10px 14px;
       font: inherit;
       font-weight: 600;
-      color: #071118;
+      color: var(--bg);
       background: var(--accent);
       cursor: pointer;
     }
@@ -834,7 +967,7 @@
       text-align: center;
       text-decoration: none;
       border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 12px;
+      border-radius: var(--radius);
       padding: 9px 14px;
       font: inherit;
       font-weight: 600;
@@ -868,7 +1001,7 @@
     .button-muted,
     .step-panel button.button-muted {
       background: rgba(255, 255, 255, 0.04);
-      color: var(--muted);
+      color: var(--text-muted);
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
@@ -945,7 +1078,7 @@
       width: 7px;
       height: 7px;
       border-radius: 999px;
-      background: #9be564;
+      background: var(--success);
       flex: 0 0 auto;
     }
 
@@ -953,7 +1086,7 @@
     .step-panel p,
     .utility-panel p {
       margin: 10px 0 0;
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.84rem;
       line-height: 1.45;
     }
@@ -989,7 +1122,7 @@
       background: rgba(7, 17, 24, 0.45);
       color: var(--text);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
+      border-radius: var(--radius);
       padding: 10px 12px;
       cursor: pointer;
     }
@@ -1031,7 +1164,7 @@
     /* --muted measured against the composited card surface: 7.01:1 at rest,
        6.41:1 on hover, 5.25:1 selected, taking the worst backdrop zone. */
     .step-panel .candidate-card span {
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.8rem;
       line-height: 1.35;
     }
@@ -1048,7 +1181,7 @@
       gap: 8px;
       align-items: center;
       padding: 5px 8px;
-      border-radius: 10px;
+      border-radius: var(--radius);
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.07);
     }
@@ -1110,7 +1243,7 @@
     }
 
     .observer-copy span {
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 0.72rem;
       line-height: 1.3;
       white-space: nowrap;
@@ -1126,16 +1259,16 @@
       font-weight: 600;
       letter-spacing: 0.03em;
       text-transform: uppercase;
-      background: rgba(255, 159, 67, 0.16);
-      color: #ffb86b;
-      border: 1px solid rgba(255, 159, 67, 0.3);
+      background: color-mix(in srgb, var(--warning) 16%, transparent);
+      color: var(--warning);
+      border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
       cursor: help;
     }
 
     .observer-reason.is-range {
-      background: rgba(124, 58, 237, 0.18);
-      color: #c4b5fd;
-      border-color: rgba(124, 58, 237, 0.35);
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--accent-strong);
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
     }
     .observer-support {
       margin-top: 6px;
@@ -1145,7 +1278,7 @@
     .observer-support > summary {
       cursor: pointer;
       list-style: none;
-      color: #c4b5fd;
+      color: var(--text-muted);
       font-size: 0.74rem;
       padding: 5px 2px;
       user-select: none;
@@ -1159,7 +1292,7 @@
        was what made every observer row 60px (#134). */
     .step-panel .observer-weight {
       width: 100%;
-      border-radius: 8px;
+      border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(5, 15, 22, 0.9);
       color: var(--text);
@@ -1196,9 +1329,9 @@
     #map3d {
       width: 100%;
       height: 100%;
-      border-radius: 18px;
+      border-radius: var(--radius-lg);
       overflow: hidden;
-      background: #071118;
+      background: var(--bg);
     }
 
     /* MapLibre popups (#91). The old Leaflet popup got a dark text colour from
@@ -1215,10 +1348,10 @@
     .maplibregl-popup .maplibregl-popup-content {
       background: rgba(7, 25, 35, 0.96);
       color: var(--text);
-      border: 1px solid var(--panel-border);
-      border-radius: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 12px 14px;
-      box-shadow: var(--shadow);
+      box-shadow: var(--surface-shadow);
       font: inherit;
       font-size: 0.82rem;
     }
@@ -1236,7 +1369,7 @@
     .maplibregl-popup .maplibregl-popup-close-button {
       background: transparent;
       border: 0;
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 1.1rem;
       line-height: 1;
       padding: 2px 7px;
@@ -1264,7 +1397,7 @@
       font-size: 15px;
       line-height: 14px;
       text-align: center;
-      color: #8ef0d1;
+      color: var(--accent-light);
       /* Outlined both ways: the basemap under a link can be near-white
          farmland or near-black water. */
       text-shadow:
@@ -1277,10 +1410,10 @@
       margin-top: 8px;
       width: 100%;
       padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(225, 29, 72, 0.5);
-      background: rgba(225, 29, 72, 0.16);
-      color: #ff8aa6;
+      border-radius: var(--radius);
+      border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
+      background: color-mix(in srgb, var(--danger) 16%, transparent);
+      color: var(--danger-text);
       font: inherit;
       font-size: 0.8rem;
       cursor: pointer;
@@ -1335,8 +1468,8 @@
       max-height: 85vh;
       border-radius: 20px;
       background: rgba(7, 25, 35, 0.97);
-      border: 1px solid var(--panel-border);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      box-shadow: var(--surface-shadow);
     }
     .intro-head {
       padding: 20px 20px 0;
@@ -1349,7 +1482,7 @@
     .intro-lede {
       margin: 0;
       font-size: 0.78rem;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.45;
     }
     .intro-body {
@@ -1384,7 +1517,7 @@
     .intro-detail {
       margin: 0 0 8px 29px;
       font-size: 0.75rem;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.5;
     }
     .intro-detail code {
@@ -1404,7 +1537,7 @@
     .intro-sub p {
       margin: 0;
       font-size: 0.75rem;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.5;
     }
     .intro-sub p.intro-sub-title {
@@ -1417,17 +1550,17 @@
       gap: 10px;
       padding: 12px 20px 16px;
       margin-top: 4px;
-      border-top: 1px solid var(--panel-border);
+      border-top: 1px solid var(--border);
     }
     .intro-hint,
     .intro-loading {
       flex: 1;
       min-width: 0;
       font-size: 0.7rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
     .intro-hint strong {
-      color: var(--muted);
+      color: var(--text-muted);
       font-weight: 600;
     }
     .intro-loading {
@@ -1448,7 +1581,7 @@
     .intro-foot button {
       flex: none;
       margin: 0;
-      border-radius: 10px;
+      border-radius: var(--radius);
       padding: 7px 15px;
       font: inherit;
       font-weight: 600;
@@ -1462,7 +1595,7 @@
       border-radius: 20px;
       background: rgba(7, 25, 35, 0.96);
       border: 1px solid rgba(143, 187, 201, 0.18);
-      box-shadow: var(--shadow);
+      box-shadow: var(--surface-shadow);
       text-align: center;
     }
     .loading-spinner {
@@ -1487,7 +1620,7 @@
       margin-top: 6px;
       font-size: 0.72rem;
       font-weight: 400;
-      color: var(--muted);
+      color: var(--text-muted);
     }
 
 
@@ -1505,7 +1638,7 @@
       align-items: baseline;
       gap: 8px;
       font-size: 0.74rem;
-      color: var(--muted);
+      color: var(--text-muted);
       margin-bottom: 6px;
     }
 
@@ -1516,7 +1649,7 @@
 
     .terrain-control input[type="range"] {
       width: 100%;
-      accent-color: #9be564;
+      accent-color: var(--accent);
       margin: 0;
     }
 
@@ -1524,7 +1657,7 @@
       margin: 7px 0 0;
       font-size: 0.66rem;
       line-height: 1.35;
-      color: var(--muted);
+      color: var(--text-muted);
     }
 
     @media (max-width: 860px) {
@@ -1659,8 +1792,8 @@
       </div>
     </div>
   </div>
+  <div class="page-stripe" aria-hidden="true"></div>
   <div class="topbar">
-    <span class="topbar-stripe"></span>
     <div class="topbar-brand">
       <span class="topbar-mark">DMC</span>
       <span class="topbar-title">MeshCore Triangulator</span>
