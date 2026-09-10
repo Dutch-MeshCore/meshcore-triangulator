@@ -1391,7 +1391,7 @@
         </div>
         <div class="intro-sub">
           <p class="intro-sub-title">Duplicates</p>
-          <p>One prefix can match several real nodes. The one with proven links wins, else the one nearest the cluster. That fallback is a guess, not evidence, so it is called out in the cluster status line. The rest are listed unchecked as <strong>duplicate prefix</strong> so you can swap the pick.</p>
+          <p>One prefix can match several real nodes. The one with proven links wins, else the one nearest the cluster. That fallback is a guess, not evidence, so it is called out in the cluster status line. The rest are listed unchecked as <strong>duplicate prefix</strong> so you can swap the pick. Swapping on the map takes effect when you click <strong>Done resolving</strong>; in the list, with <strong>Apply Inside Locked Cluster</strong>.</p>
         </div>
         <div class="intro-sub">
           <p class="intro-sub-title">Missing a repeater</p>
@@ -2762,11 +2762,15 @@
     // prefix.
     //
     // It writes through the editor's own checkboxes rather than mutating
-    // currentMatchedNodes directly. That keeps ONE apply path: the existing
-    // "Apply to estimate" button reads the DOM, and the per-prefix weight
-    // carryover in syncClusterEditorFromLockedRegion() keeps a weight the
-    // operator set when the pick changes. A second write path would have to
-    // reimplement both and would drift.
+    // currentMatchedNodes directly. That keeps ONE apply path: applyClusterEditor()
+    // reads the DOM for both "Apply Inside Locked Cluster" and "Done resolving",
+    // and the per-prefix weight carryover in syncClusterEditorFromLockedRegion()
+    // keeps a weight the operator set when the pick changes. A second write path
+    // would have to reimplement both and would drift.
+    //
+    // Leaving the mode applies: the panel holding the pick is off-screen from
+    // the map on most windows, so "Done resolving" used to leave the map back on
+    // the old pick with the change stranded in a list the operator could not see.
     //
     // What this mode can and cannot say: it shows prefix AMBIGUITY, never
     // correctness. Which candidate is the real observer is not knowable from
@@ -2837,7 +2841,7 @@
       groups.forEach((group) => selectDuplicateCandidate(group, autoPickFor(group)));
       renderManualLayer();
       if (groups.length) {
-        clusterEditorStatus.textContent = `${groups.length} prefix${groups.length === 1 ? "" : "es"} back on the automatic pick. Apply to re-run the estimate.`;
+        clusterEditorStatus.textContent = `${groups.length} prefix${groups.length === 1 ? "" : "es"} back on the automatic pick. Applied when you finish resolving.`;
       }
     }
 
@@ -3038,7 +3042,7 @@
       }
       updateApplyButtonState();
       clusterEditorStatus.textContent =
-        `${group.prefix} now represented by ${node.adv_name || node.name || "the selected node"}. Apply to re-estimate.`;
+        `${group.prefix} now represented by ${node.adv_name || node.name || "the selected node"}. Applied when you finish resolving.`;
       renderManualLayer();
       return true;
     }
@@ -3060,7 +3064,7 @@
       manualBannerText.textContent = (groups.length
         ? `${groups.length} ambiguous prefix${groups.length === 1 ? "" : "es"}, ${others} other candidate${others === 1 ? "" : "s"} shown. Click one to use it.`
         : "No prefix in this cluster has more than one candidate.")
-        + (changed ? ` ${changed} changed from the automatic pick.` : "")
+        + (changed ? ` ${changed} changed from the automatic pick; “Done resolving” applies them.` : "")
         + rivalNote
         + " Drag an observer to move it."
         + (moved ? ` ${moved} moved.` : "");
@@ -4075,6 +4079,36 @@
       applyClusterWeightsButton.disabled = editorSignature() === editorBaselineSignature;
     }
 
+    // Whether the editor holds picks/weights that are not in the estimate yet.
+    function hasPendingClusterEdits() {
+      return !observerEditor.hidden && editorSignature() !== editorBaselineSignature;
+    }
+
+    // The one apply path (#33): read the editor's rows and push them at the
+    // locked cluster. "Apply Inside Locked Cluster" and "Done resolving" both
+    // land here, so a map pick and a tick in the list reach the estimate the
+    // same way.
+    function applyClusterEditor() {
+      const selectedNodes = [];
+      observerEditor.querySelectorAll(".observer-row").forEach((row) => {
+        const checkbox = row.querySelector('input[type="checkbox"]');
+        const weightInput = row.querySelector(".observer-weight");
+        if (!checkbox || !weightInput || !checkbox.checked) {
+          return;
+        }
+        const weight = Number.parseFloat(weightInput.value || "1");
+        selectedNodes.push({
+          id: checkbox.dataset.nodeid,
+          weight: Number.isFinite(weight) && weight > 0 ? weight : 1
+        });
+      });
+      if (!selectedNodes.length) {
+        clusterEditorStatus.textContent = "Select at least one resolved observer inside the locked cluster.";
+        return false;
+      }
+      return reweightLockedCluster(selectedNodes);
+    }
+
     function reweightLockedCluster(selectedNodes, missingPrefixes = []) {
       if (!currentResolvedContext) {
         return false;
@@ -4607,51 +4641,59 @@
       if (el) el.addEventListener("input", () => { resetShareUi(); syncAddressBar(); });
     });
     terrainRescoreButton.addEventListener("click", runTerrainRescore);
-    applyClusterWeightsButton.addEventListener("click", () => {
-      const selectedNodes = [];
-      observerEditor.querySelectorAll(".observer-row").forEach((row) => {
-        const checkbox = row.querySelector('input[type="checkbox"]');
-        const weightInput = row.querySelector(".observer-weight");
-        if (!checkbox || !weightInput || !checkbox.checked) {
-          return;
-        }
-        const weight = Number.parseFloat(weightInput.value || "1");
-        selectedNodes.push({
-          id: checkbox.dataset.nodeid,
-          weight: Number.isFinite(weight) && weight > 0 ? weight : 1
-        });
-      });
-      if (!selectedNodes.length) {
-        clusterEditorStatus.textContent = "Select at least one resolved observer inside the locked cluster.";
-        return;
-      }
-      reweightLockedCluster(selectedNodes);
-    });
+    applyClusterWeightsButton.addEventListener("click", applyClusterEditor);
     addClusterPrefixesButton.addEventListener("click", () => {
       const prefixes = parseWeightedPrefixes(clusterAddPrefixInput.value).map((item) => item.prefix);
       if (!prefixes.length) {
         clusterEditorStatus.textContent = "Enter one or more repeater prefixes that exist inside the locked cluster.";
         return;
       }
-      const found = new Set();
+      // One prefix stands for ONE observer. The editor lists every candidate a
+      // prefix resolved to, so ticking each matching row let a single prefix
+      // contribute twice, from two positions that can be tens of km apart, and
+      // pull the estimate between them. Add the same node dedupeByPrefix() kept
+      // and leave the rest to "Resolve on map", which is where a swap belongs.
+      const rowsByPrefix = new Map();
       observerEditor.querySelectorAll(".observer-row").forEach((row) => {
         const checkbox = row.querySelector('input[type="checkbox"]');
+        if (!checkbox || !row.querySelector(".observer-weight")) return;
+        const prefix = checkbox.dataset.prefix;
+        if (!rowsByPrefix.has(prefix)) rowsByPrefix.set(prefix, []);
+        rowsByPrefix.get(prefix).push(row);
+      });
+      const rowNodeId = (row) => row.querySelector('input[type="checkbox"]').dataset.nodeid;
+      const found = new Set();
+      const ambiguous = [];
+      prefixes.forEach((prefix) => {
+        const rows = rowsByPrefix.get(prefix);
+        if (!rows || !rows.length) return;
+        found.add(prefix);
+        // Already represented — a pick in force is the operator's, not ours.
+        if (rows.some((row) => row.querySelector('input[type="checkbox"]').checked)) return;
+        // A proven-link support node is range-only and never represents a
+        // prefix, so it is the last resort rather than the first row.
+        const real = rows.filter((row) => observerExclusionReasons.get(rowNodeId(row)) !== "proven-link (range only)");
+        const pool = real.length ? real : rows;
+        const row = pool.find((candidate) => !observerExclusionReasons.has(rowNodeId(candidate))) || pool[0];
+        const checkbox = row.querySelector('input[type="checkbox"]');
         const weightInput = row.querySelector(".observer-weight");
-        if (!checkbox || !weightInput) {
-          return;
+        checkbox.checked = true;
+        if (!Number.parseFloat(weightInput.value)) {
+          weightInput.value = "1.00";
         }
-        if (prefixes.includes(checkbox.dataset.prefix)) {
-          checkbox.checked = true;
-          if (!Number.parseFloat(weightInput.value)) {
-            weightInput.value = "1.00";
-          }
-          found.add(checkbox.dataset.prefix);
-        }
+        if (pool.length > 1) ambiguous.push(`${prefix} (${pool.length} candidates)`);
       });
       const missing = prefixes.filter((prefix) => !found.has(prefix));
-      clusterEditorStatus.textContent = missing.length
-        ? `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}. Not found here: ${missing.join(", ")}.`
-        : `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}.`;
+      // Which candidate is the real observer is not knowable here (#85), so the
+      // choice is named rather than presented as settled.
+      const ambiguousNote = ambiguous.length
+        ? ` More than one node carries ${ambiguous.join(", ")} — the automatic pick was added; swap it with “Resolve on map”.`
+        : "";
+      clusterEditorStatus.textContent = (found.size
+        ? `Added prefixes inside locked cluster: ${Array.from(found).join(", ")}.`
+        : "None of those prefixes are inside the locked cluster.")
+        + (missing.length ? ` Not found here: ${missing.join(", ")}.` : "")
+        + ambiguousNote;
       updateApplyButtonState();
     });
     // Enable Apply only when the editor differs from the last applied state.
@@ -4664,7 +4706,17 @@
     if (manualResetButton) manualResetButton.addEventListener("click", resetDuplicatePicks);
     if (manualPositionsButton) manualPositionsButton.addEventListener("click", restoreAllPositions);
     if (manualModeButton) {
-      manualModeButton.addEventListener("click", () => setManualMode(!manualMode));
+      // Leaving the mode is the operator saying the picks are final, so it
+      // applies them instead of stranding them in a panel that is off-screen
+      // from the map. Only this button does it: switchToRegion() and
+      // syncControlStates() also drop manual mode, but they are abandoning the
+      // locked cluster, and applying on the way out would write picks into a
+      // region the operator just left.
+      manualModeButton.addEventListener("click", () => {
+        const leaving = manualMode;
+        if (leaving && hasPendingClusterEdits()) applyClusterEditor();
+        setManualMode(!leaving);
+      });
     }
     changeClusterButton.addEventListener("click", () => {
       if (manualMode) setManualMode(false);
