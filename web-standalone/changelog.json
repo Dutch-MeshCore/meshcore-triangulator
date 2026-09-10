@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-10-opaque-bar",
+    "date": "2026-09-10",
+    "title": "The top bar stops being see-through",
+    "body": "Content scrolling underneath the top bar showed straight through it. The bar has its own backdrop now."
+  },
+  {
     "id": "2026-09-10-product-bar",
     "date": "2026-09-10",
     "title": "Every DutchMeshCore app, one click away",

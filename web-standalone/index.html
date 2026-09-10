@@ -117,6 +117,10 @@
       --bar-h: 34px;
       --bar-bg: rgba(3, 4, 6, 0.74);
       --glass-bg: rgba(18, 21, 28, 0.88);
+      /* The bar is sticky: content scrolls UNDER it, so it needs a fill of its
+         own plus a blur, not a translucent surface token (STYLE-GUIDE §9). */
+      --navbar-bg: rgba(3, 4, 6, 0.88);
+      --navbar-shadow: 0 14px 35px rgba(0, 0, 0, 0.42);
       /* Measured from the rendered navbar; the fallback is its one-row height. */
       --nav-h: 53px;
 
@@ -182,6 +186,8 @@
       --raised: rgba(20, 30, 60, 0.06);
       --bar-bg: rgba(255, 255, 255, 0.82);
       --glass-bg: rgba(255, 255, 255, 0.94);
+      --navbar-bg: rgba(255, 255, 255, 0.90);
+      --navbar-shadow: 0 10px 26px rgba(20, 30, 60, 0.10);
     }
 
     * {
@@ -272,7 +278,10 @@
       margin: 16px auto 0;
       padding: 10px 16px;
       border-radius: var(--radius);
-      background: var(--surface-2);
+      background: var(--navbar-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: var(--navbar-shadow);
       border: 1px solid var(--border);
     }
     /* ── Shared product bar (STYLE-GUIDE §9, #142) ──────────────────────
