@@ -80,6 +80,12 @@
       --accent: #1976e8;
       --accent-light: #74adff;
       --accent-strong: #93bfff;
+      /* Text on an accent tint (on-toggles, the selected tab, app monograms)
+         and the fill behind a primary button's white text, each picked per
+         theme for AA contrast (#145). --accent stays the brand blue for links
+         and tints. */
+      --accent-ink: #74adff;
+      --accent-fill: #1671e0;
       --border: rgba(255, 255, 255, 0.14);
       --border-strong: rgba(255, 255, 255, 0.22);
       --surface-hover: rgba(255, 255, 255, 0.055);
@@ -159,6 +165,8 @@
       --accent: #3d6fdb;
       --accent-light: #5b86e5;
       --accent-strong: #3455b0;
+      --accent-ink: #3455b0;
+      --accent-fill: #3d6fdb;
       --border: #cdd2e8;
       --border-strong: #b5bce0;
       --surface-hover: #eef0f8;
@@ -291,11 +299,24 @@
       margin: 16px auto 0;
       padding: 10px 16px;
       border-radius: var(--radius);
+      box-shadow: var(--navbar-shadow);
+      border: 1px solid var(--border);
+    }
+    /* No background or backdrop-filter on the bar element itself (#145). A
+       backdrop-filter makes an element the containing block for its
+       position:fixed descendants, which pinned the phone's What's new sheet and
+       the apps sheet to the bar instead of the viewport: the sheet collapsed to
+       a 26px strip. The blurred fill lives on ::before, a separate box, so the
+       bar is no longer that containing block. */
+    .topbar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
       background: var(--navbar-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      box-shadow: var(--navbar-shadow);
-      border: 1px solid var(--border);
     }
     /* ── Shared product bar (STYLE-GUIDE §9, #142) ──────────────────────
        One thin band above the app navbar, the same on every DMC subdomain,
@@ -383,7 +404,7 @@
       font-family: var(--font-head);
       font-size: 0.74rem;
       letter-spacing: 0.04em;
-      color: var(--accent-light);
+      color: var(--accent-ink);
     }
     .dmc-app-ico img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .dmc-app-name { font-size: 0.76rem; font-weight: 600; line-height: 1.1; }
@@ -410,13 +431,17 @@
          375px those three carets are the difference between the brand and the
          controls sharing a row and the bar growing a third one. */
       .topbar .dd-caret { display: none; }
-      .topbar { gap: 8px; }
-      .topbar-meta { gap: 5px; }
+      /* A bottom sheet on a phone, the same pattern as What's new (#145). It
+         hung from calc(var(--nav-h) + 6px), which overlapped the bar by the
+         page's top margin whenever the page was not scrolled. */
       .dmc-apps .dd-menu {
         position: fixed;
+        top: auto;
         left: 8px;
         right: 8px;
-        top: calc(var(--nav-h) + 6px);
+        bottom: 12px;
+        max-height: 70vh;
+        overflow-y: auto;
         width: auto;
         background: var(--menu-bg);
         backdrop-filter: none;
@@ -542,6 +567,14 @@
       right: 0;
     }
 
+    /* revealOnNarrow() scrolls these to the top of the viewport; with the bar
+       sticky that put their first line underneath it (#145). */
+    .step-panel,
+    .map-col,
+    #terrain-status {
+      scroll-margin-top: calc(var(--nav-h) + 12px);
+    }
+
     .shell {
       width: min(1200px, calc(100% - 32px));
       margin: 16px auto 24px;
@@ -580,7 +613,10 @@
       gap: 8px;
       padding: 8px 10px;
       border-radius: var(--radius);
-      background: var(--chip-bg);
+      /* --surface, not --chip-bg: the quiet controls inside are filled with
+         --chip-bg, which on a --chip-bg card measured 1.00:1 in light mode
+         and left them as bare text (#145). */
+      background: var(--surface);
       border: 1px solid var(--border);
     }
     .layer-chips-label {
@@ -614,21 +650,16 @@
       border: 1px solid var(--border-strong);
       box-shadow: var(--surface-shadow);
     }
+    /* Only the reset the three-role system does not cover. Padding, weight
+       and a pressed look used to live here as `.controls-card button` (0,1,1)
+       and `...[aria-pressed="true"]` (0,2,1), which outranked the quiet role
+       (0,1,0 / 0,2,0): Clear Map, Share and Resolve on map kept the old
+       bordered look (#145). Every button in the strip carries a role class
+       now, so the role rules decide. */
     .controls-card button {
       margin: 0;
-      border-radius: var(--radius);
-      padding: 7px 12px;
-      font: inherit;
-      font-weight: 600;
+      font-family: inherit;
       font-size: 0.85rem;
-      cursor: pointer;
-    }
-    /* 3D View is a toggle, not a one-way "open" (#29): the same control
-       enters and exits the mode, so it needs a visible pressed state. */
-    .controls-card button[aria-pressed="true"] {
-      background: color-mix(in srgb, var(--accent) 16%, transparent);
-      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-      color: var(--accent);
     }
     /* Share (#34): confirmation text and the manual-copy fallback both take
        a full row under the buttons, so appearing/disappearing doesn't
@@ -814,7 +845,7 @@
     }
     .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
       background: color-mix(in srgb, var(--accent) 18%, transparent);
-      color: var(--accent-light);
+      color: var(--accent-ink);
       font-weight: 600;
       /* The tint alone says which one is on; the inset ring was one more edge
          in a screen that had 37 of them (#144). */
@@ -1184,11 +1215,16 @@
       font: inherit;
       font-weight: 600;
       color: #ffffff;
-      background: var(--accent);
+      /* White on the brand blue #1976e8 is 4.38:1, under AA for 16px text;
+         the fill is 4% darker (#145). */
+      background: var(--accent-fill);
       cursor: pointer;
     }
+    /* Hover darkens (#145). Brightening dropped white text on the light fill
+       from 4.67:1 to 4.09:1; darkening raises it instead. */
     .source-panel button:hover,
-    .step-panel button:hover { filter: brightness(1.08); }
+    .step-panel button:hover { filter: brightness(0.92); }
+    .step-panel .step-head:hover { filter: none; }
 
     /* Utility actions (reset / view switches) are quiet ghost buttons. */
     .utility-panel button,
@@ -1266,13 +1302,13 @@
     .controls-card .layer-chip[aria-pressed="true"],
     .button-muted[aria-pressed="true"] {
       background: color-mix(in srgb, var(--accent) 18%, transparent);
-      color: var(--accent-light);
+      color: var(--accent-ink);
       border-color: transparent;
     }
     .controls-card .layer-chip[aria-pressed="true"]:hover,
     .button-muted[aria-pressed="true"]:hover {
       border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-      color: var(--accent-light);
+      color: var(--accent-ink);
     }
 
     /* Focus visibility + disabled states (accessibility polish). */
@@ -1326,18 +1362,25 @@
     .manual-banner[hidden] {
       display: none;
     }
+    /* Quiet role (#145): these reset map edits, they do not complete a step.
+       They were a 999px green-outlined pill at 23px, a fourth look. */
     .manual-banner button {
       margin: 0;
-      padding: 3px 9px;
-      border: 1px solid color-mix(in srgb, var(--success) 60%, transparent);
-      border-radius: 999px;
-      background: transparent;
+      height: 28px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: var(--chip-bg);
       color: var(--text);
       font: inherit;
-      font-size: 0.74rem;
-      font-weight: 600;
+      font-size: 0.78rem;
+      font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
+    }
+    .manual-banner button:hover {
+      background: var(--raised);
+      border-color: var(--border);
     }
     .manual-banner button[hidden] {
       display: none;
@@ -1855,16 +1898,23 @@
       border-width: 2px;
       flex: none;
     }
+    /* The intro's one action is a primary (#145). With no background, border
+       or colour of its own, the browser's grey outset button showed through
+       on the first thing a new visitor clicks. */
     .intro-foot button {
       flex: none;
       margin: 0;
+      min-height: 38px;
+      border: 0;
       border-radius: var(--radius);
-      padding: 7px 15px;
+      padding: 0 16px;
       font: inherit;
       font-weight: 600;
-      font-size: 0.8rem;
+      color: #ffffff;
+      background: var(--accent-fill);
       cursor: pointer;
     }
+    .intro-foot button:hover { filter: brightness(0.92); }
 
     .loading-card {
       width: min(260px, 80%);
@@ -1971,8 +2021,11 @@
       }
       /* On a narrow screen the What's new panel is a sheet at the bottom of
          the viewport instead of a dropdown under the bell, whose position
-         depends on how the button row wrapped (#112). */
-      .whats-new-panel {
+         depends on how the button row wrapped (#112). Written with the
+         .topbar-meta ancestor so it outranks the desktop rule of the same
+         selector above; as a bare .whats-new-panel (0,1,0) it lost top, left
+         and right to it (#145). */
+      .topbar-meta .whats-new-panel {
         position: fixed;
         top: auto;
         right: 12px;
@@ -1982,13 +2035,25 @@
         max-height: 60vh;
       }
     }
+    /* These two only win placed after the (max-width: 860px) block and the
+       unconditional .topbar-meta rule. Inside the earlier 768px block both were
+       silently overridden at equal specificity (#145). */
+    @media (max-width: 768px) {
+      .topbar { gap: 8px; }
+      .topbar-meta { gap: 5px; }
+    }
     /* Touch targets (#117): 40 px for the icon buttons and the map's own
        controls, a thumb you can hit for the relief slider. Coarse pointer
        only, so the desktop layout keeps its density. */
     @media (pointer: coarse) {
-      .controls-card button.is-icon {
-        width: 40px;
+      /* The icon buttons moved into the bar (#142), so the old
+         `.controls-card button.is-icon` matched nothing and the #117 touch
+         targets silently stopped applying (#145). */
+      .topbar-meta .is-icon,
+      .topbar .dd-trig {
+        min-width: 40px;
         height: 40px;
+        min-height: 40px;
       }
       /* MapLibre's own sheet loads after this one, so the selector needs
          the extra ancestor to win. */
@@ -2087,10 +2152,12 @@
     </nav>
     <div class="topbar-meta">
     <div class="dd dmc-apps" id="apps-dd">
-      <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Apps">
+      <button class="dd-trig" type="button" aria-expanded="false" aria-controls="apps-menu" aria-label="Apps">
         <svg class="apps-icon" viewBox="0 0 12 12" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.25"/><circle cx="6" cy="1.5" r="1.25"/><circle cx="10.5" cy="1.5" r="1.25"/><circle cx="1.5" cy="6" r="1.25"/><circle cx="6" cy="6" r="1.25"/><circle cx="10.5" cy="6" r="1.25"/><circle cx="1.5" cy="10.5" r="1.25"/><circle cx="6" cy="10.5" r="1.25"/><circle cx="10.5" cy="10.5" r="1.25"/></svg><span class="dd-txt">Apps</span><span class="dd-caret">&#9662;</span>
       </button>
-      <div class="dd-menu" role="menu">
+      <!-- A disclosure of links, not a menu (#145): role="menu" promises
+           menuitems and arrow-key navigation, and these are plain links. -->
+      <div class="dd-menu" id="apps-menu">
         <div class="dmc-apps-grid">
           <a class="dmc-app" href="https://dutchmeshcore.nl/"><span class="dmc-app-ico"><img src="assets/logo/dmc-logo.jpg" alt=""></span><span class="dmc-app-name">Community</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
           <a class="dmc-app" href="https://toolbox.dutchmeshcore.nl/"><span class="dmc-app-ico">TB</span><span class="dmc-app-name">Toolbox</span><span class="dmc-app-host">toolbox</span></a>
@@ -6833,17 +6900,26 @@
     function closeBandDropdowns(except) {
       document.querySelectorAll(".topbar .dd.open").forEach((dd) => {
         if (dd === except) return;
-        dd.classList.remove("open");
         const trigger = dd.querySelector(".dd-trig");
-        if (trigger) trigger.setAttribute("aria-expanded", "false");
+        // Hiding a menu that holds focus drops it to <body> (#145), so hand it
+        // back to the trigger, where a keyboard user expects to be.
+        const heldFocus = dd.contains(document.activeElement) && document.activeElement !== trigger;
+        dd.classList.remove("open");
+        if (trigger) {
+          trigger.setAttribute("aria-expanded", "false");
+          if (heldFocus) trigger.focus();
+        }
       });
     }
 
     document.querySelectorAll(".topbar .dd").forEach((dd) => {
       const trigger = dd.querySelector(".dd-trig");
       if (!trigger) return;
-      trigger.addEventListener("click", (event) => {
-        event.stopPropagation();
+      // No stopPropagation (#145): the click has to reach document, where the
+      // What's new panel and the relief popover listen for clicks outside
+      // themselves. The outside-click handler below already ignores clicks that
+      // land inside a .dd, so this toggle is not undone by it.
+      trigger.addEventListener("click", () => {
         const opening = !dd.classList.contains("open");
         closeBandDropdowns(dd);
         dd.classList.toggle("open", opening);
@@ -6857,6 +6933,12 @@
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeBandDropdowns();
+    });
+
+    // English is the only language for now, but picking it should behave like
+    // picking a theme: confirm and close, not leave the menu open (#145).
+    document.querySelectorAll("[data-lang-opt]").forEach((button) => {
+      button.addEventListener("click", () => closeBandDropdowns());
     });
 
     function storedTheme() {
