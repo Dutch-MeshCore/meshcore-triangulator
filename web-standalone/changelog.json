@@ -3,7 +3,7 @@
     "id": "2026-09-10-calmer-interface",
     "date": "2026-09-10",
     "title": "A calmer, flatter interface",
-    "body": "Buttons came in fourteen different looks at nine heights; there are three kinds now, and one blue button per panel. Panels lost their sheen, grid and glow, so what is on them stands out instead."
+    "body": "Buttons came in fourteen looks; now there are three, with one blue button per panel and flat panels."
   },
   {
     "id": "2026-09-10-opaque-bar",
@@ -15,7 +15,7 @@
     "id": "2026-09-10-product-bar",
     "date": "2026-09-10",
     "title": "Every DutchMeshCore app, one click away",
-    "body": "The top bar now carries a switcher to every other DutchMeshCore app, plus the language and theme pickers, all in one row rather than a second bar above it."
+    "body": "The top bar now has a switcher to every DutchMeshCore app, plus language and theme, in one row."
   },
   {
     "id": "2026-09-10-plain-scroll-zooms",
