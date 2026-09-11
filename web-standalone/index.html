@@ -80,6 +80,12 @@
       --accent: #1976e8;
       --accent-light: #74adff;
       --accent-strong: #93bfff;
+      /* Text on an accent tint (on-toggles, the selected tab, app monograms)
+         and the fill behind a primary button's white text, each picked per
+         theme for AA contrast (#145). --accent stays the brand blue for links
+         and tints. */
+      --accent-ink: #74adff;
+      --accent-fill: #1671e0;
       --border: rgba(255, 255, 255, 0.14);
       --border-strong: rgba(255, 255, 255, 0.22);
       --surface-hover: rgba(255, 255, 255, 0.055);
@@ -91,19 +97,18 @@
       --danger: var(--red);
       --danger-text: #ff8080;
 
-      /* Glass over glow. */
-      --surface:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 34%),
-        linear-gradient(180deg, rgba(22, 24, 29, 0.94), rgba(6, 7, 10, 0.95));
-      --surface-2: rgba(8, 10, 13, 0.80);
-      --surface-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 18px 40px rgba(0, 0, 0, 0.35);
-      --body-bg:
-        radial-gradient(circle at 18% 18%, rgba(223, 32, 32, 0.15), transparent 28%),
-        radial-gradient(circle at 82% 28%, rgba(25, 118, 232, 0.14), transparent 30%),
-        linear-gradient(180deg, #090b10 0%, #06070a 48%, #030304 100%);
-      --sheen-opacity: 0.15;
-      --grid-opacity: 0.28;
-      --scan-opacity: 0.11;
+      /* Flat surfaces (#144). The guide's signature is "glass over glow": a
+         sheen gradient on every panel over a red/blue-lit ground, with a 42px
+         grid and scanlines on top. That look belongs on a landing page; in a
+         dense tool it is four decorative layers behind the thing you came to
+         read. The brand stays in the colours, the tricolour and the type. */
+      --surface: #12151b;
+      --surface-2: #0e1117;
+      --surface-shadow: none;
+      --body-bg: none;
+      --sheen-opacity: 0;
+      --grid-opacity: 0;
+      --scan-opacity: 0;
 
       /* App-level surfaces the guide does not name. Defined in both roots so
          no rule below has to know which theme is running. Values sit on the
@@ -113,16 +118,32 @@
       --chip-bg: rgba(255, 255, 255, 0.05);
       --scrim: rgba(3, 4, 6, 0.62);
       --raised: rgba(255, 255, 255, 0.10);
+      /* Shared product bar (STYLE-GUIDE §9, #142). */
+      --bar-h: 34px;
+      --bar-bg: rgba(3, 4, 6, 0.74);
+      --glass-bg: rgba(18, 21, 28, 0.88);
+      /* The bar is sticky: content scrolls UNDER it, so it needs a fill of its
+         own plus a blur, not a translucent surface token (STYLE-GUIDE §9). */
+      --navbar-bg: rgba(3, 4, 6, 0.88);
+      --navbar-shadow: 0 14px 35px rgba(0, 0, 0, 0.42);
+      /* Measured from the rendered navbar; the fallback is its one-row height. */
+      --nav-h: 53px;
 
       /* Type. */
       --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
       --font-head: 'Aldrich', 'Segoe UI', system-ui, sans-serif;
       --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Fira Mono', monospace;
-      --heading-shadow: 0 3px 0 #000;
+      /* A hard 3px drop shadow reads as a game title, not as a section
+         heading in a tool (#144). */
+      --heading-shadow: none;
       --fs-sm: 12px;
       --fs-md: 14px;
       --fs-lg: 16px;
       --fs-xl: 18px;
+
+      /* The tricolour band every DMC surface opens with (STYLE-GUIDE §9).
+         Theme-constant: it is the brand, not the palette. */
+      --stripe-h: 4px;
 
       /* Geometry: one base radius for controls, one for large surfaces. */
       --radius: 8px;
@@ -144,6 +165,8 @@
       --accent: #3d6fdb;
       --accent-light: #5b86e5;
       --accent-strong: #3455b0;
+      --accent-ink: #3455b0;
+      --accent-fill: #3d6fdb;
       --border: #cdd2e8;
       --border-strong: #b5bce0;
       --surface-hover: #eef0f8;
@@ -155,9 +178,8 @@
       --danger-text: #c43a3a;
 
       --surface: #ffffff;
-      --surface-2: #eef0f8;
-      --surface-shadow: 0 10px 26px rgba(20, 30, 60, 0.08);
-      /* Flat ground, and the two overlays switched off by their tokens. */
+      --surface-2: #f4f6fb;
+      --surface-shadow: none;
       --body-bg: none;
       --sheen-opacity: 0;
       --grid-opacity: 0;
@@ -170,6 +192,10 @@
       --chip-bg: #eef0f8;
       --scrim: rgba(26, 28, 46, 0.35);
       --raised: rgba(20, 30, 60, 0.06);
+      --bar-bg: rgba(255, 255, 255, 0.82);
+      --glass-bg: rgba(255, 255, 255, 0.94);
+      --navbar-bg: rgba(255, 255, 255, 0.90);
+      --navbar-shadow: 0 10px 26px rgba(20, 30, 60, 0.10);
     }
 
     * {
@@ -228,21 +254,29 @@
        down over the map strip, and at equal z-index the later element in the
        document wins — so the strip's buttons cut straight through the theme
        and What's new panels. */
-    .topbar {
-      position: relative;
-      z-index: 2;
-    }
-
     /* Headings and the brand run in the display face, uppercased, with a hard
        drop shadow that light mode drops (STYLE-GUIDE §3). */
-    h1, h2, h3,
-    .step-kicker,
+    /* The display face carries the brand, not every section heading (#144).
+       Uppercase Aldrich on each panel title made three shouted words per card;
+       panel titles are sentence-case body type, which is what a tool's chrome
+       looks like. */
     .topbar-title {
       font-family: var(--font-head);
       text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.06em;
       color: var(--heading);
-      text-shadow: var(--heading-shadow);
+    }
+    h1, h2, h3 {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--heading);
+    }
+    /* The step number is a label, so it keeps the small-caps treatment. */
+    .step-kicker {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
     code, kbd, samp, pre {
       font-family: var(--font-mono);
@@ -253,7 +287,10 @@
        accent stripe, not a repaint) so it still reads as "this page, but
        tied to the wider community". */
     .topbar {
-      position: relative;
+      /* The only bar, so it owns the top (#143). */
+      position: sticky;
+      top: 0;
+      z-index: 30;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -262,9 +299,157 @@
       margin: 16px auto 0;
       padding: 10px 16px;
       border-radius: var(--radius);
-      background: var(--surface-2);
+      box-shadow: var(--navbar-shadow);
       border: 1px solid var(--border);
     }
+    /* No background or backdrop-filter on the bar element itself (#145). A
+       backdrop-filter makes an element the containing block for its
+       position:fixed descendants, which pinned the phone's What's new sheet and
+       the apps sheet to the bar instead of the viewport: the sheet collapsed to
+       a 26px strip. The blurred fill lives on ::before, a separate box, so the
+       bar is no longer that containing block. */
+    .topbar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      background: var(--navbar-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    /* ── Shared product bar (STYLE-GUIDE §9, #142) ──────────────────────
+       One thin band above the app navbar, the same on every DMC subdomain,
+       carrying the family brand, the app switcher, and the language and theme
+       pickers. Vendored from style-guide.html until the shared file has
+       somewhere to be served from — that is still an open decision in the
+       guide. Token names are this app's canonical ones (--text-muted,
+       --surface-hover) where the reference uses the website's. */
+    /* The dropdown pattern the bar's three shared controls use. */
+    .dd { position: relative; }
+    .dd-caret { font-size: 0.65rem; opacity: 0.7; }
+    .dd-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      display: none;
+      min-width: 168px;
+      padding: 6px;
+      background: var(--menu-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--surface-shadow);
+      z-index: 40;
+    }
+    .dd.open .dd-menu { display: block; }
+    .topbar .dd-menu button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      border: 0;
+      background: none;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      margin: 0;
+    }
+    .topbar .dd-menu button:hover { background: var(--surface-hover); }
+    .dd-menu .dd-ico { width: 20px; text-align: center; }
+    .dd-menu .chk { margin-left: auto; color: var(--accent); visibility: hidden; }
+    .dd-menu button[aria-checked="true"] .chk { visibility: visible; }
+
+    /* App switcher: a glass sheet of monogram tiles. */
+    .dmc-apps .dd-menu {
+      width: 372px;
+      padding: 10px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .dmc-apps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+    .dmc-app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 6px 8px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--text);
+      text-align: center;
+    }
+    .dmc-app:hover { background: var(--surface-hover); }
+    .dmc-app[aria-current="page"] {
+      background: var(--surface-hover);
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+    .dmc-app-ico {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--chip-bg);
+      font-family: var(--font-head);
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      color: var(--accent-ink);
+    }
+    .dmc-app-ico img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dmc-app-name { font-size: 0.76rem; font-weight: 600; line-height: 1.1; }
+    .dmc-app-host { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-faint); }
+    .dmc-apps-foot {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.74rem;
+    }
+    .dmc-apps-foot a { color: var(--link); text-decoration: none; }
+    .dmc-apps-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .topbar .dd-trig .dd-txt { display: none; }
+      /* "MeshCore Triangulator" plus five controls does not fit one row at
+         375px, and the logo beside it already says which family this is, so
+         the name shortens rather than the bar growing a third row (#143). */
+      .title-family { display: none; }
+      /* A caret next to an icon-only chip says nothing the chip does not; at
+         375px those three carets are the difference between the brand and the
+         controls sharing a row and the bar growing a third one. */
+      .topbar .dd-caret { display: none; }
+      /* A bottom sheet on a phone, the same pattern as What's new (#145). It
+         hung from calc(var(--nav-h) + 6px), which overlapped the bar by the
+         page's top margin whenever the page was not scrolled. */
+      .dmc-apps .dd-menu {
+        position: fixed;
+        top: auto;
+        left: 8px;
+        right: 8px;
+        bottom: 12px;
+        max-height: 70vh;
+        overflow-y: auto;
+        width: auto;
+        background: var(--menu-bg);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+      .dmc-apps-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* Every DMC surface opens with this band (STYLE-GUIDE §9): full width, in
        normal flow, above the navbar. It was a 4px vertical bar beside the
        topbar, which is the same idea in the wrong orientation. */
@@ -273,6 +458,8 @@
       background: linear-gradient(90deg, var(--red), var(--white) 50%, var(--blue));
     }
     .topbar-brand {
+      text-decoration: none;
+      color: inherit;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -282,13 +469,9 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, var(--red), var(--blue));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
+      object-fit: cover;
+      border: 1px solid var(--border-strong);
+      display: block;
       flex: 0 0 auto;
     }
     .topbar-title {
@@ -313,107 +496,68 @@
     .topbar-nav a:hover {
       color: var(--text);
     }
-    .topbar-dropdown {
-      position: relative;
-    }
-    .topbar-dropdown summary {
-      cursor: pointer;
-      color: var(--text);
-      list-style: none;
-    }
-    .topbar-dropdown summary::-webkit-details-marker {
-      display: none;
-    }
-    .topbar-dropdown summary::after {
-      content: " \25BE";
-    }
-    .topbar-dropdown-menu {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 16px;
-      padding: 12px 14px;
-      min-width: 260px;
-      border-radius: var(--radius);
-      background: var(--menu-bg);
-      border: 1px solid var(--border);
-      box-shadow: var(--surface-shadow);
-      z-index: 20;
-    }
-    .topbar-dropdown-menu a {
-      font-size: 0.82rem;
-    }
-    /* Theme picker: chip trigger, checkable menu (STYLE-GUIDE §9). */
-    .theme-dd > summary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 9px;
-      border: 1px solid var(--border);
-      background: var(--surface-hover);
-      font-size: 0.8rem;
-      line-height: 1;
-    }
-    .theme-dd > summary::after { content: none; }
-    .theme-dd > summary:hover { border-color: var(--accent); }
-    .theme-menu {
-      left: auto;
-      right: 0;
-      min-width: 150px;
-      grid-template-columns: 1fr;
-      gap: 2px;
-      padding: 6px;
-    }
-    .theme-menu button {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      width: 100%;
-      margin: 0;
-      padding: 7px 9px;
-      border: 0;
-      border-radius: var(--radius);
-      background: none;
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 0.82rem;
-      cursor: pointer;
-      text-align: left;
-    }
-    .theme-menu button:hover { background: var(--surface-hover); color: var(--text); }
-    .theme-menu .chk { color: var(--accent); visibility: hidden; }
-    .theme-menu button[aria-checked="true"] { color: var(--text); }
-    .theme-menu button[aria-checked="true"] .chk { visibility: visible; }
+    /* One control shape for the whole bar (#143). It ran three at once: 28px
+       icon buttons, mono chips with a caret, and an emoji at a third size —
+       the junk-drawer problem the map strip had, moved into the chrome. */
     .topbar-meta {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex: 0 0 auto;
     }
+    /* The family's controls and the app's own, told apart by a rule rather
+       than by being differently shaped. */
+    .topbar-meta .meta-rule {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 2px;
+      flex: 0 0 auto;
+    }
+    .topbar .dd-trig,
     .topbar-meta .is-icon {
-      width: 28px;
-      height: 28px;
-      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      line-height: 1;
-      font-size: 0.8rem;
+      gap: 5px;
+      height: 28px;
+      min-width: 28px;
+      padding: 0 8px;
+      margin: 0;
       border-radius: var(--radius);
       border: 1px solid var(--border);
-      background: var(--surface-hover);
+      background: var(--chip-bg);
       color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      line-height: 1;
       cursor: pointer;
     }
+    .topbar .dd-trig:hover,
     .topbar-meta .is-icon:hover {
-      background: var(--raised);
       color: var(--text);
+      border-color: var(--accent);
+      background: var(--chip-bg);
+      filter: none;
+    }
+    /* Icons carry currentColor, so they follow the theme and the hover state
+       instead of sitting there as OS emoji at their own size and hue. */
+    .topbar-meta .icon {
+      width: 14px;
+      height: 14px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .topbar .dd-trig svg.apps-icon {
+      width: 11px;
+      height: 11px;
+      fill: currentColor;
+      stroke: none;
     }
     /* The panel hangs off the topbar now, so it opens downward from the right
        edge rather than from a card in the column. */
@@ -423,20 +567,12 @@
       right: 0;
     }
 
-    .topbar-github {
-      flex: 0 0 auto;
-      border-radius: var(--radius);
-      padding: 6px 12px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      background: var(--surface-hover);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      text-decoration: none;
-    }
-    .topbar-github:hover {
-      background: var(--border);
-      color: var(--text);
+    /* revealOnNarrow() scrolls these to the top of the viewport; with the bar
+       sticky that put their first line underneath it (#145). */
+    .step-panel,
+    .map-col,
+    #terrain-status {
+      scroll-margin-top: calc(var(--nav-h) + 12px);
     }
 
     .shell {
@@ -445,8 +581,11 @@
       display: grid;
       grid-template-columns: 300px 1fr;
       gap: 18px;
-      /* Don't stretch the map row to match the (tall) left column. */
-      align-items: start;
+      /* The map column DOES stretch to the left column's height, which is what
+         gives the sticky map room to stay put for the whole scroll. The map
+         keeps its own viewport-sized height, so stretching the column does not
+         stretch the map (#142). */
+      align-items: stretch;
     }
 
     .map-wrap {
@@ -474,7 +613,10 @@
       gap: 8px;
       padding: 8px 10px;
       border-radius: var(--radius);
-      background: var(--chip-bg);
+      /* --surface, not --chip-bg: the quiet controls inside are filled with
+         --chip-bg, which on a --chip-bg card measured 1.00:1 in light mode
+         and left them as bare text (#145). */
+      background: var(--surface);
       border: 1px solid var(--border);
     }
     .layer-chips-label {
@@ -508,21 +650,16 @@
       border: 1px solid var(--border-strong);
       box-shadow: var(--surface-shadow);
     }
+    /* Only the reset the three-role system does not cover. Padding, weight
+       and a pressed look used to live here as `.controls-card button` (0,1,1)
+       and `...[aria-pressed="true"]` (0,2,1), which outranked the quiet role
+       (0,1,0 / 0,2,0): Clear Map, Share and Resolve on map kept the old
+       bordered look (#145). Every button in the strip carries a role class
+       now, so the role rules decide. */
     .controls-card button {
       margin: 0;
-      border-radius: var(--radius);
-      padding: 7px 12px;
-      font: inherit;
-      font-weight: 600;
+      font-family: inherit;
       font-size: 0.85rem;
-      cursor: pointer;
-    }
-    /* 3D View is a toggle, not a one-way "open" (#29): the same control
-       enters and exits the mode, so it needs a visible pressed state. */
-    .controls-card button[aria-pressed="true"] {
-      background: color-mix(in srgb, var(--accent) 16%, transparent);
-      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-      color: var(--accent);
     }
     /* Share (#34): confirmation text and the manual-copy fallback both take
        a full row under the buttons, so appearing/disappearing doesn't
@@ -571,7 +708,6 @@
       display: none;
     }
     .controls-card .layer-chip {
-      padding: 6px 10px;
       font-size: 0.78rem;
     }
     /* The help and What's new buttons stay together at the right, and wrap
@@ -588,8 +724,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 28px;
       padding: 0;
       line-height: 1;
     }
@@ -710,9 +845,11 @@
     }
     .step-panel .entry-tabs .entry-tab[aria-pressed="true"] {
       background: color-mix(in srgb, var(--accent) 18%, transparent);
-      color: var(--text);
+      color: var(--accent-ink);
       font-weight: 600;
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+      /* The tint alone says which one is on; the inset ring was one more edge
+         in a screen that had 37 of them (#144). */
+      box-shadow: none;
     }
     .step-panel .entry-tabs .entry-tab:hover {
       color: var(--text);
@@ -1057,19 +1194,37 @@
 
     /* Primary actions (the workflow buttons) carry the accent. */
     .source-panel button,
+    /* ── Three button roles, and nothing else (#144) ────────────────────
+       The app had 28 visible buttons drawn in 14 looks at 9 heights, with 37
+       bordered elements. Panels, buttons and chips all shouted at the same
+       volume, so nothing receded and the screen read as a pile.
+
+         primary    filled accent, ONE per panel, completes the step
+         secondary  outline, everything else you may do here
+         quiet      soft fill, NO border — map controls, chips, icons
+
+       The rule doing most of the work: a border is for a container, not for a
+       control. Quiet controls carry a fill instead and get their border back
+       on hover and focus, so nothing looks dead. */
     .step-panel button {
       margin-top: 12px;
+      min-height: 38px;
       border: 0;
       border-radius: var(--radius);
-      padding: 10px 14px;
+      padding: 0 16px;
       font: inherit;
       font-weight: 600;
-      color: var(--bg);
-      background: var(--accent);
+      color: #ffffff;
+      /* White on the brand blue #1976e8 is 4.38:1, under AA for 16px text;
+         the fill is 4% darker (#145). */
+      background: var(--accent-fill);
       cursor: pointer;
     }
+    /* Hover darkens (#145). Brightening dropped white text on the light fill
+       from 4.67:1 to 4.09:1; darkening raises it instead. */
     .source-panel button:hover,
-    .step-panel button:hover { filter: brightness(1.06); }
+    .step-panel button:hover { filter: brightness(0.92); }
+    .step-panel .step-head:hover { filter: none; }
 
     /* Utility actions (reset / view switches) are quiet ghost buttons. */
     .utility-panel button,
@@ -1101,21 +1256,59 @@
       margin-top: 12px;
     }
 
+    /* Secondary: outline, no fill. */
     .button-secondary,
     .step-panel button.button-secondary {
-      background: var(--chip-bg);
+      background: transparent;
       color: var(--text);
-      border: 1px solid var(--raised);
+      border: 1px solid var(--border);
+      font-weight: 500;
     }
+    .button-secondary:hover,
     .step-panel button.button-secondary:hover {
-      background: var(--raised);
+      background: var(--surface-hover);
+      border-color: var(--border-strong);
+      filter: none;
     }
 
+    /* Quiet: a fill and no border at all. */
     .button-muted,
-    .step-panel button.button-muted {
-      background: var(--surface-hover);
+    .step-panel button.button-muted,
+    .controls-card .layer-chip,
+    .topbar .dd-trig,
+    .topbar-meta .is-icon {
+      min-height: 28px;
+      height: 28px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: var(--chip-bg);
       color: var(--text-muted);
-      border: 1px solid var(--border);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .button-muted:hover,
+    .step-panel button.button-muted:hover,
+    .controls-card .layer-chip:hover,
+    .topbar .dd-trig:hover,
+    .topbar-meta .is-icon:hover {
+      background: var(--raised);
+      border-color: var(--border);
+      color: var(--text);
+      filter: none;
+    }
+    /* A toggle that is on reads as active through a tint of the accent, which
+       does not compete with a real primary action. */
+    .controls-card .layer-chip[aria-pressed="true"],
+    .button-muted[aria-pressed="true"] {
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--accent-ink);
+      border-color: transparent;
+    }
+    .controls-card .layer-chip[aria-pressed="true"]:hover,
+    .button-muted[aria-pressed="true"]:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      color: var(--accent-ink);
     }
 
     /* Focus visibility + disabled states (accessibility polish). */
@@ -1169,18 +1362,25 @@
     .manual-banner[hidden] {
       display: none;
     }
+    /* Quiet role (#145): these reset map edits, they do not complete a step.
+       They were a 999px green-outlined pill at 23px, a fourth look. */
     .manual-banner button {
       margin: 0;
-      padding: 3px 9px;
-      border: 1px solid color-mix(in srgb, var(--success) 60%, transparent);
-      border-radius: 999px;
-      background: transparent;
+      height: 28px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: var(--chip-bg);
       color: var(--text);
       font: inherit;
-      font-size: 0.74rem;
-      font-weight: 600;
+      font-size: 0.78rem;
+      font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
+    }
+    .manual-banner button:hover {
+      background: var(--raised);
+      border-color: var(--border);
     }
     .manual-banner button[hidden] {
       display: none;
@@ -1295,8 +1495,13 @@
       align-items: center;
       padding: 5px 8px;
       border-radius: var(--radius);
+      /* A row in a list is not a separate object, and fourteen of them each
+         drawing an edge is most of why the panel read as a pile (#144). */
       background: var(--surface-hover);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      border: 1px solid transparent;
+    }
+    .observer-row:hover {
+      border-color: var(--border);
     }
 
     .cluster-status .cluster-headline {
@@ -1433,10 +1638,12 @@
 
     .map-wrap {
       padding: 10px;
-      /* Fixed, viewport-sized map that stays put while the left column scrolls. */
+      /* Viewport-sized map that stays put while the left column scrolls, resting
+         just below the two sticky bars above it. --nav-h is measured, because
+         the navbar wraps to two rows at some widths (#142). */
       position: sticky;
-      top: 84px;
-      height: calc(100vh - 108px);
+      top: calc(var(--nav-h) + 10px);
+      height: calc(100vh - var(--nav-h) - 34px);
     }
 
     #map3d {
@@ -1691,16 +1898,23 @@
       border-width: 2px;
       flex: none;
     }
+    /* The intro's one action is a primary (#145). With no background, border
+       or colour of its own, the browser's grey outset button showed through
+       on the first thing a new visitor clicks. */
     .intro-foot button {
       flex: none;
       margin: 0;
+      min-height: 38px;
+      border: 0;
       border-radius: var(--radius);
-      padding: 7px 15px;
+      padding: 0 16px;
       font: inherit;
       font-weight: 600;
-      font-size: 0.8rem;
+      color: #ffffff;
+      background: var(--accent-fill);
       cursor: pointer;
     }
+    .intro-foot button:hover { filter: brightness(0.92); }
 
     .loading-card {
       width: min(260px, 80%);
@@ -1790,7 +2004,10 @@
         min-height: 56vh;
       }
       .topbar {
-        padding: 10px 12px 10px 16px;
+        /* The extra 4px on the left was clearance for the vertical stripe that
+           used to sit beside the bar; without it the brand and the controls
+           share a row at 375px instead of missing it by a pixel. */
+        padding: 10px 12px;
         gap: 10px;
       }
       .topbar-nav {
@@ -1802,13 +2019,13 @@
         order: 3;
         flex-basis: 100%;
       }
-      .topbar-github {
-        order: 2;
-      }
       /* On a narrow screen the What's new panel is a sheet at the bottom of
          the viewport instead of a dropdown under the bell, whose position
-         depends on how the button row wrapped (#112). */
-      .whats-new-panel {
+         depends on how the button row wrapped (#112). Written with the
+         .topbar-meta ancestor so it outranks the desktop rule of the same
+         selector above; as a bare .whats-new-panel (0,1,0) it lost top, left
+         and right to it (#145). */
+      .topbar-meta .whats-new-panel {
         position: fixed;
         top: auto;
         right: 12px;
@@ -1818,13 +2035,25 @@
         max-height: 60vh;
       }
     }
+    /* These two only win placed after the (max-width: 860px) block and the
+       unconditional .topbar-meta rule. Inside the earlier 768px block both were
+       silently overridden at equal specificity (#145). */
+    @media (max-width: 768px) {
+      .topbar { gap: 8px; }
+      .topbar-meta { gap: 5px; }
+    }
     /* Touch targets (#117): 40 px for the icon buttons and the map's own
        controls, a thumb you can hit for the relief slider. Coarse pointer
        only, so the desktop layout keeps its density. */
     @media (pointer: coarse) {
-      .controls-card button.is-icon {
-        width: 40px;
+      /* The icon buttons moved into the bar (#142), so the old
+         `.controls-card button.is-icon` matched nothing and the #117 touch
+         targets silently stopped applying (#145). */
+      .topbar-meta .is-icon,
+      .topbar .dd-trig {
+        min-width: 40px;
         height: 40px;
+        min-height: 40px;
       }
       /* MapLibre's own sheet loads after this one, so the selector needs
          the extra ancestor to win. */
@@ -1906,46 +2135,80 @@
     </div>
   </div>
   <div class="page-stripe" aria-hidden="true"></div>
+  <!-- One bar, not two (#143). The guide's product bar is a band ABOVE the app
+       navbar, which stacks two chromes on a tool whose whole point is the map
+       below them. Same four things it prescribes — DMC brand, app switcher,
+       language, theme — merged into the app's own bar instead of above it. -->
   <div class="topbar">
-    <div class="topbar-brand">
-      <span class="topbar-mark">DMC</span>
-      <span class="topbar-title">MeshCore Triangulator</span>
-    </div>
+    <a class="topbar-brand" href="https://dutchmeshcore.nl/">
+      <img class="topbar-mark" src="assets/logo/dmc-logo.jpg" alt="Dutch MeshCore">
+      <span class="topbar-title"><span class="title-family">MeshCore </span>Triangulator</span>
+    </a>
     <nav class="topbar-nav">
-      <details class="topbar-dropdown">
-        <summary>Dutch MeshCore</summary>
-        <div class="topbar-dropdown-menu">
-          <a href="https://dutchmeshcore.nl/#home" target="_blank" rel="noopener">Home</a>
-          <a href="https://dutchmeshcore.nl/#cluster" target="_blank" rel="noopener">MQTT Cluster</a>
-          <a href="https://portal.dutchmeshcore.nl" target="_blank" rel="noopener">Portal</a>
-          <a href="https://toolbox.dutchmeshcore.nl/" target="_blank" rel="noopener">Toolbox</a>
-          <a href="https://observers.dutchmeshcore.nl/" target="_blank" rel="noopener">Observer Stats</a>
-          <a href="https://settings.dutchmeshcore.nl/" target="_blank" rel="noopener">NL Mesh Settings</a>
-          <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord</a>
-        </div>
-      </details>
+      <!-- Not DMC subdomains, so not in the switcher — and MC-Radar is this
+           app's data source, so both belong to the app (#142). -->
       <a href="https://mesh-hunter.eu/" target="_blank" rel="noopener">Mesh-Hunter ↗</a>
       <a href="https://mc-radar.woodwar.com" target="_blank" rel="noopener">MC-Radar ↗</a>
     </nav>
     <div class="topbar-meta">
-      <details class="topbar-dropdown theme-dd" id="theme-dropdown">
-        <summary id="theme-trigger" aria-label="Theme" title="Theme">🌙</summary>
-        <div class="topbar-dropdown-menu theme-menu" role="menu" aria-label="Theme">
-          <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">✓</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">✓</span></button>
-          <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">✓</span></button>
+    <div class="dd dmc-apps" id="apps-dd">
+      <button class="dd-trig" type="button" aria-expanded="false" aria-controls="apps-menu" aria-label="Apps">
+        <svg class="apps-icon" viewBox="0 0 12 12" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.25"/><circle cx="6" cy="1.5" r="1.25"/><circle cx="10.5" cy="1.5" r="1.25"/><circle cx="1.5" cy="6" r="1.25"/><circle cx="6" cy="6" r="1.25"/><circle cx="10.5" cy="6" r="1.25"/><circle cx="1.5" cy="10.5" r="1.25"/><circle cx="6" cy="10.5" r="1.25"/><circle cx="10.5" cy="10.5" r="1.25"/></svg><span class="dd-txt">Apps</span><span class="dd-caret">&#9662;</span>
+      </button>
+      <!-- A disclosure of links, not a menu (#145): role="menu" promises
+           menuitems and arrow-key navigation, and these are plain links. -->
+      <div class="dd-menu" id="apps-menu">
+        <div class="dmc-apps-grid">
+          <a class="dmc-app" href="https://dutchmeshcore.nl/"><span class="dmc-app-ico"><img src="assets/logo/dmc-logo.jpg" alt=""></span><span class="dmc-app-name">Community</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
+          <a class="dmc-app" href="https://toolbox.dutchmeshcore.nl/"><span class="dmc-app-ico">TB</span><span class="dmc-app-name">Toolbox</span><span class="dmc-app-host">toolbox</span></a>
+          <a class="dmc-app" href="https://observers.dutchmeshcore.nl/"><span class="dmc-app-ico">OB</span><span class="dmc-app-name">Observers</span><span class="dmc-app-host">observers</span></a>
+          <a class="dmc-app" href="https://triangulator.dutchmeshcore.nl/" aria-current="page"><span class="dmc-app-ico">TR</span><span class="dmc-app-name">Triangulator</span><span class="dmc-app-host">triangulator</span></a>
+          <a class="dmc-app" href="https://settings.dutchmeshcore.nl/"><span class="dmc-app-ico">ST</span><span class="dmc-app-name">Settings</span><span class="dmc-app-host">settings</span></a>
+          <a class="dmc-app" href="https://ota.dutchmeshcore.nl/"><span class="dmc-app-ico">OTA</span><span class="dmc-app-name">OTA</span><span class="dmc-app-host">ota</span></a>
+          <a class="dmc-app" href="https://portal.dutchmeshcore.nl/"><span class="dmc-app-ico">PT</span><span class="dmc-app-name">Portal</span><span class="dmc-app-host">portal</span></a>
+          <a class="dmc-app" href="https://dutchmeshcore.nl/firmware.html"><span class="dmc-app-ico">FW</span><span class="dmc-app-name">Firmware</span><span class="dmc-app-host">dutchmeshcore.nl</span></a>
         </div>
-      </details>
-      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">?</button>
+        <div class="dmc-apps-foot">
+          <a href="https://discord.dutchmeshcore.nl" target="_blank" rel="noopener">Discord &#8599;</a>
+          <a href="https://github.com/Dutch-MeshCore" target="_blank" rel="noopener">GitHub &#8599;</a>
+        </div>
+      </div>
+    </div>
+    <!-- English-only for now, but the band is meant to be the same control
+         set on every subdomain, so the picker is here rather than this
+         being the one app whose band is a control short (#142). -->
+    <div class="dd" id="lang-dd">
+      <button class="dd-trig" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+        <span id="lang-label">EN</span><span class="dd-caret">&#9662;</span>
+      </button>
+      <div class="dd-menu" role="menu">
+        <button type="button" role="menuitemradio" data-lang-opt="en" aria-checked="true">
+          <span class="dd-ico">&#127468;&#127463;</span> English <span class="chk">&#10003;</span>
+        </button>
+      </div>
+    </div>
+    <div class="dd" id="theme-dd">
+      <button class="dd-trig" type="button" id="theme-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Theme">
+        <svg class="icon" id="theme-icon" viewBox="0 0 16 16" aria-hidden="true"></svg><span class="dd-caret">&#9662;</span>
+      </button>
+      <div class="dd-menu" role="menu">
+        <button type="button" role="menuitemradio" data-theme-choice="dark" aria-checked="true">Dark<span class="chk">&#10003;</span></button>
+        <button type="button" role="menuitemradio" data-theme-choice="light" aria-checked="false">Light<span class="chk">&#10003;</span></button>
+        <button type="button" role="menuitemradio" data-theme-choice="system" aria-checked="false">System<span class="chk">&#10003;</span></button>
+      </div>
+    </div>
+      <span class="meta-rule" aria-hidden="true"></span>
+      <button id="intro-open-button" type="button" class="button-muted is-icon" aria-label="How this works" title="How this works">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4"/><path d="M6.2 6.1a1.85 1.85 0 1 1 2.2 2.2v1"/><path d="M8.4 11.2h.01"/></svg>
+      </button>
       <div class="whats-new">
         <button id="whats-new-button" type="button" class="button-muted is-icon" aria-label="What's new" aria-haspopup="dialog" title="What's new">
-          <span aria-hidden="true">🔔</span><span id="whats-new-dot" class="whats-new-dot" hidden></span>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.6a4 4 0 0 1 8 0c0 3 .9 4.2 1.3 4.6H2.7C3.1 10.8 4 9.6 4 6.6Z"/><path d="M6.6 13.2a1.6 1.6 0 0 0 2.8 0"/></svg><span id="whats-new-dot" class="whats-new-dot" hidden></span>
         </button>
         <div id="whats-new-panel" class="whats-new-panel" role="dialog" aria-label="What's new" hidden>
           <div id="whats-new-list"></div>
         </div>
       </div>
-      <a class="topbar-github" href="https://github.com/Dutch-MeshCore/meshcore-triangulator" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
   <main class="shell">
@@ -1979,7 +2242,7 @@
               <label for="incident-input">Or paste an attack URL or number</label>
               <div class="import-row">
                 <input id="incident-input" type="text" value="" placeholder="2047" aria-label="Attack URL or number">
-                <button id="incident-load-button" type="button" class="button-secondary">Load</button>
+                <button id="incident-load-button" type="button">Load</button>
               </div>
               <p id="incident-status" class="hint"></p>
             </div>
@@ -2029,7 +2292,7 @@
           <div id="candidate-list" class="candidate-list" hidden></div>
           <label for="cluster-add-prefix-input" id="cluster-add-prefix-label" hidden>Add repeater prefixes within this cluster</label>
           <input id="cluster-add-prefix-input" type="text" hidden placeholder="48, 93">
-          <button id="add-cluster-prefixes-button" type="button" hidden>Add Prefixes In Locked Cluster</button>
+          <button id="add-cluster-prefixes-button" type="button" class="button-secondary" hidden>Add Prefixes In Locked Cluster</button>
           <div id="observer-editor" class="observer-editor" hidden></div>
           <button id="apply-cluster-weights-button" type="button" hidden>Apply Inside Locked Cluster</button>
           <p id="cluster-editor-status" hidden>Only resolved observers inside the locked cluster can be edited here.</p>
@@ -2061,7 +2324,7 @@
            above the map because the whole column does. -->
       <div class="controls-card">
         <button id="clear-map-button" type="button" class="button-muted">Clear Map</button>
-        <button id="manual-mode-button" type="button" class="button-secondary" aria-pressed="false" hidden>Resolve on map</button>
+        <button id="manual-mode-button" type="button" class="button-muted" aria-pressed="false" hidden>Resolve on map</button>
         <div id="layer-chips" class="layer-chips" role="group" aria-label="Map layers" hidden>
           <span class="layer-chips-label">Show</span>
           <button type="button" class="button-muted layer-chip" data-layer="ranges" aria-pressed="true">Ranges</button>
@@ -2082,7 +2345,7 @@
           </div>
         </div>
         <div class="controls-meta">
-          <button id="share-button" type="button" class="button-secondary">Share</button>
+          <button id="share-button" type="button" class="button-muted">Share</button>
         </div>
         <!-- Full-width rows last, so they wrap below the button row. -->
         <p id="share-status" class="share-status" role="status" hidden></p>
@@ -6614,9 +6877,69 @@
     // so the choice carries across the DMC subdomains. The pre-paint script in
     // <head> applies it before first paint; this keeps it in step afterwards.
     const THEME_KEY = "meshcore-theme";
-    const themeDropdown = document.getElementById("theme-dropdown");
-    const themeTrigger = document.getElementById("theme-trigger");
+    const themeIcon = document.getElementById("theme-icon");
     const systemLight = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+
+    // The navbar wraps to two rows at some widths, and the sticky map rests
+    // beneath it, so its height is measured rather than assumed (#142).
+    const topbarEl = document.querySelector(".topbar");
+    function syncNavHeight() {
+      if (!topbarEl) return;
+      const h = Math.round(topbarEl.getBoundingClientRect().height);
+      if (h) document.documentElement.style.setProperty("--nav-h", `${h}px`);
+    }
+    if (topbarEl && window.ResizeObserver) {
+      new ResizeObserver(syncNavHeight).observe(topbarEl);
+    }
+    window.addEventListener("resize", syncNavHeight);
+    syncNavHeight();
+
+    // ── The band's dropdowns (#142, STYLE-GUIDE §9) ─────────────────────
+    // One behaviour for all three: a trigger toggles, opening one closes the
+    // others, and an outside click or Escape closes whatever is open.
+    function closeBandDropdowns(except) {
+      document.querySelectorAll(".topbar .dd.open").forEach((dd) => {
+        if (dd === except) return;
+        const trigger = dd.querySelector(".dd-trig");
+        // Hiding a menu that holds focus drops it to <body> (#145), so hand it
+        // back to the trigger, where a keyboard user expects to be.
+        const heldFocus = dd.contains(document.activeElement) && document.activeElement !== trigger;
+        dd.classList.remove("open");
+        if (trigger) {
+          trigger.setAttribute("aria-expanded", "false");
+          if (heldFocus) trigger.focus();
+        }
+      });
+    }
+
+    document.querySelectorAll(".topbar .dd").forEach((dd) => {
+      const trigger = dd.querySelector(".dd-trig");
+      if (!trigger) return;
+      // No stopPropagation (#145): the click has to reach document, where the
+      // What's new panel and the relief popover listen for clicks outside
+      // themselves. The outside-click handler below already ignores clicks that
+      // land inside a .dd, so this toggle is not undone by it.
+      trigger.addEventListener("click", () => {
+        const opening = !dd.classList.contains("open");
+        closeBandDropdowns(dd);
+        dd.classList.toggle("open", opening);
+        trigger.setAttribute("aria-expanded", opening ? "true" : "false");
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".topbar .dd")) return;
+      closeBandDropdowns();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeBandDropdowns();
+    });
+
+    // English is the only language for now, but picking it should behave like
+    // picking a theme: confirm and close, not leave the menu open (#145).
+    document.querySelectorAll("[data-lang-opt]").forEach((button) => {
+      button.addEventListener("click", () => closeBandDropdowns());
+    });
 
     function storedTheme() {
       try { return localStorage.getItem(THEME_KEY) || "dark"; } catch (e) { return "dark"; }
@@ -6626,7 +6949,13 @@
       const light = choice === "light" || (choice === "system" && systemLight && systemLight.matches);
       if (light) document.documentElement.setAttribute("data-theme", "light");
       else document.documentElement.removeAttribute("data-theme");
-      if (themeTrigger) themeTrigger.textContent = light ? "☀️" : "🌙";
+      // Sun and moon as paths, so they take currentColor and the hover state
+      // like every other control in the bar (#143).
+      if (themeIcon) {
+        themeIcon.innerHTML = light
+          ? '<circle cx="8" cy="8" r="3.2"/><path d="M8 1.4v1.6M8 13v1.6M2.3 2.3l1.2 1.2M12.5 12.5l1.2 1.2M1.4 8h1.6M13 8h1.6M2.3 13.7l1.2-1.2M12.5 3.5l1.2-1.2"/>'
+          : '<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8Z"/>';
+      }
       document.querySelectorAll("[data-theme-choice]").forEach((button) => {
         button.setAttribute("aria-checked", button.dataset.themeChoice === choice ? "true" : "false");
       });
@@ -6639,7 +6968,7 @@
         const choice = button.dataset.themeChoice;
         try { localStorage.setItem(THEME_KEY, choice); } catch (e) { /* private mode */ }
         applyTheme(choice);
-        if (themeDropdown) themeDropdown.open = false;
+        closeBandDropdowns();
       });
     });
 

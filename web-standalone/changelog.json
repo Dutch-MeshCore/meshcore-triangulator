@@ -1,5 +1,29 @@
 [
   {
+    "id": "2026-09-11-review-fixes",
+    "date": "2026-09-11",
+    "title": "What's new works on a phone",
+    "body": "On a phone What's new now opens as a sheet instead of off-screen, and light-mode toggles pass contrast."
+  },
+  {
+    "id": "2026-09-10-calmer-interface",
+    "date": "2026-09-10",
+    "title": "A calmer, flatter interface",
+    "body": "Buttons came in fourteen looks; now there are three, with one blue button per panel and flat panels."
+  },
+  {
+    "id": "2026-09-10-opaque-bar",
+    "date": "2026-09-10",
+    "title": "The top bar stops being see-through",
+    "body": "Content scrolling underneath the top bar showed straight through it. The bar has its own backdrop now."
+  },
+  {
+    "id": "2026-09-10-product-bar",
+    "date": "2026-09-10",
+    "title": "Every DutchMeshCore app, one click away",
+    "body": "The top bar now has a switcher to every DutchMeshCore app, plus language and theme, in one row."
+  },
+  {
     "id": "2026-09-10-plain-scroll-zooms",
     "date": "2026-09-10",
     "title": "Scrolling zooms the map again",
