@@ -1,5 +1,11 @@
 [
   {
+    "id": "2026-09-30-product-bar-followup",
+    "date": "2026-09-30",
+    "title": "Step 1 tabs back to size",
+    "body": "The Step 1 tabs and step headers are compact again, and the title opens the community site in a new tab."
+  },
+  {
     "id": "2026-09-11-review-fixes",
     "date": "2026-09-11",
     "title": "What's new works on a phone",
